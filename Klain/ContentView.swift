@@ -36,6 +36,16 @@ struct ContentView: View {
                     ToolbarItemGroup(placement: .bottomBar) { Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }; Spacer(); Button("Статистика", systemImage: "chart.bar") { stats = true } }
                 }
         } detail: {
+            chatDetail
+        }
+        .preferredColorScheme(.dark).tint(Palette.accent)
+        .onChange(of: store.selectedChatID) { _, id in if id != nil { compactColumn = .detail } }
+        .sheet(isPresented: $settings) { ProvidersView() }
+        .sheet(isPresented: $stats) { StatisticsView() }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
+        .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
+    }
+    private var chatDetail: some View {
             VStack(spacing: 0) {
                 modelMenu.padding(.horizontal).padding(.vertical, 10)
                 Picker("Reasoning", selection: Binding(get: { store.selectedChat?.reasoning ?? "default" }, set: { store.setReasoning($0) })) {
@@ -54,14 +64,7 @@ struct ContentView: View {
                 }
                 composer
             }.background(Palette.background).navigationTitle("klain").navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden(true)
-                .toolbar { ToolbarItem(placement: .topBarLeading) { Button { compactColumn = .sidebar } label: { Label("Назад", systemImage: "chevron.left") } }; Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } }
-        }
-        .preferredColorScheme(.dark).tint(Palette.accent)
-        .onChange(of: store.selectedChatID) { _, id in if id != nil { compactColumn = .detail } }
-        .sheet(isPresented: $settings) { ProvidersView() }
-        .sheet(isPresented: $stats) { StatisticsView() }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
-        .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
+                .toolbar { ToolbarItem(placement: .topBarLeading) { Button { compactColumn = .sidebar } label: { Label("Назад", systemImage: "chevron.left") } }; ToolbarItemGroup(placement: .topBarTrailing) { Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } } }
     }
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -116,7 +119,7 @@ struct ContentView: View {
                 guard data.count <= 20_000_000, attachments.reduce(0, { $0 + $1.data.count }) + data.count <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
                 let type = item.supportedContentTypes.first?.preferredMIMEType ?? "application/octet-stream"
                 await MainActor.run { attachments.append(Attachment(name: "Медиа \(attachments.count + 1)", mime: type, data: data)) }
-            } catch { await MainActor.run { error = error.localizedDescription } }
+            } catch { await MainActor.run { self.error = error.localizedDescription } }
         }
         await MainActor.run { photoItems = [] }
     }
