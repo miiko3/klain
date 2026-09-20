@@ -18,10 +18,10 @@ struct ContentView: View {
     @State private var error: String?
     @State private var search = ""
     @State private var photoItems: [PhotosPickerItem] = []
-    @State private var compactColumn: NavigationSplitViewColumn = .sidebar
+    @State private var path: [UUID] = []
     var body: some View {
-        NavigationSplitView(preferredCompactColumn: $compactColumn) {
-            List(selection: $store.selectedChatID) {
+        NavigationStack(path: $path) {
+            List {
                 Section("ДИАЛОГИ") {
                     ForEach(store.chats.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }) { chat in
                         NavigationLink(value: chat.id) { Label(chat.title, systemImage: "bubble.left").font(.system(.subheadline, design: .monospaced)) }
@@ -32,14 +32,14 @@ struct ContentView: View {
                 .scrollContentBackground(.hidden).background(Palette.background)
                 .navigationTitle("klain")
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) { Button("Новый чат", systemImage: "square.and.pencil") { store.newChat() }.disabled(store.isSending) }
-                    ToolbarItemGroup(placement: .bottomBar) { Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }; Spacer(); Button("Статистика", systemImage: "chart.bar") { stats = true } }
+                    ToolbarItem(placement: .topBarTrailing) { Button("Новый чат", systemImage: "square.and.pencil") { store.newChat(); if let id = store.selectedChatID { path = [id] } }.disabled(store.isSending) }
+                ToolbarItemGroup(placement: .bottomBar) { Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }; Spacer(); Button("Статистика", systemImage: "chart.bar") { stats = true } }
                 }
-        } detail: {
-            chatDetail
+                .navigationDestination(for: UUID.self) { id in
+                    chatDetail.onAppear { store.selectedChatID = id }
+                }
         }
         .preferredColorScheme(.dark).tint(Palette.accent)
-        .onChange(of: store.selectedChatID) { _, id in if id != nil { compactColumn = .detail } }
         .sheet(isPresented: $settings) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
@@ -57,14 +57,19 @@ struct ContentView: View {
                         LazyVStack(alignment: .leading, spacing: 24) {
                             if store.selectedChat?.messages.isEmpty != false { welcome }
                             ForEach(store.selectedChat?.messages ?? []) { message in MessageView(message: message).id(message.id) }
+                            if store.isSending && store.selectedChat?.messages.last?.text.isEmpty == true {
+                                HStack(spacing: 10) { ProgressView(); Text("Думает…").foregroundStyle(.secondary) }
+                                    .padding(.horizontal, 16).accessibilityElement(children: .combine)
+                            }
                             Color.clear.frame(height: 1).id("bottom")
                         }.padding(20)
-                    }.scrollDismissesKeyboard(.interactively).gesture(DragGesture(minimumDistance: 18).onEnded { value in if value.translation.height > 30 { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } }).onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
+                    }.scrollDismissesKeyboard(.interactively).onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
                         .onChange(of: store.selectedChatID) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
                 }
                 composer
-            }.background(Palette.background).navigationTitle("klain").navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden(true)
-                .toolbar { ToolbarItem(placement: .topBarLeading) { Button { compactColumn = .sidebar } label: { Label("Назад", systemImage: "chevron.left") } }; ToolbarItemGroup(placement: .topBarTrailing) { Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } } }
+            }.background(Palette.background).navigationTitle(store.selectedChat?.title ?? "Новый чат").navigationBarTitleDisplayMode(.inline)
+                .background(BackTitleConfigurator())
+                .toolbar { ToolbarItemGroup(placement: .topBarTrailing) { Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } } }
     }
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -91,10 +96,8 @@ struct ContentView: View {
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7).padding(.top, 4)
             HStack {
-                Menu {
-                    Button("Файлы", systemImage: "folder") { importing = true }
-                    PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos])) { Label("Галерея", systemImage: "photo.on.rectangle") }
-                } label: { Image(systemName: "paperclip") }.onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
+                Button("Файлы", systemImage: "folder") { importing = true }.labelStyle(.iconOnly)
+                PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos])) { Image(systemName: "photo.on.rectangle") }.onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
                 Text("klain / chat").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary)
                 Spacer()
                 if store.isSending { Button("Стоп", systemImage: "stop.circle.fill") { store.stop() } }
