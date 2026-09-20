@@ -24,13 +24,14 @@ import Security
     func removeProvider(_ id: UUID) throws { let updated = providers.filter { $0.id != id }; try Vault.save(updated); providers = updated }
     func select(_ p: Provider, model: String) { guard !isSending, let i = chats.firstIndex(where: { $0.id == selectedChatID }) else { return }; chats[i].providerID = p.id; chats[i].model = model; save() }
     var activeProvider: Provider? { if let id = selectedChat?.providerID { return providers.first { $0.id == id } }; return providers.first }
-    func deleteChat(_ id: UUID) { guard !isSending else { return }; chats.removeAll { $0.id == id }; if selectedChatID == id { selectedChatID = chats.first?.id }; if chats.isEmpty { newChat() }; save() }
+    func deleteChat(_ id: UUID) { guard !isSending else { return }; chats.removeAll { $0.id == id }; records.removeAll { $0.chatID == id }; if selectedChatID == id { selectedChatID = chats.first(where: { $0.archived != true })?.id }; save() }
+    func archiveChat(_ id: UUID, archived: Bool) { guard !isSending, let i = chats.firstIndex(where: { $0.id == id }) else { return }; chats[i].archived = archived; save() }
     func start(_ text: String, attachments: [Attachment]) { guard !isSending else { return }; isSending = true; generation = Task { await send(text, attachments: attachments) } }
     func stop() { generation?.cancel() }
     func setModel(_ model: String) { if let i = chats.firstIndex(where: { $0.id == selectedChatID }) { chats[i].model = model; save() } }
     func setReasoning(_ value: String) { if let i = chats.firstIndex(where: { $0.id == selectedChatID }) { chats[i].reasoning = value; save() } }
     var selectedChat: Chat? { chats.first { $0.id == selectedChatID } }
-    func newChat() { guard !isSending else { return }; var c = Chat(); c.providerID = activeProvider?.id; c.model = selectedChat?.model ?? providers.first?.models?.first?.id ?? ""; chats.insert(c, at: 0); selectedChatID = c.id; save() }
+    func newChat() { guard !isSending else { return }; var c = Chat(); c.emoji = ["🌿", "🪐", "🦊", "✨", "🌊", "🍀", "🚀", "🐈", "🌻", "🦋"].randomElement(); c.providerID = activeProvider?.id; c.model = selectedChat?.model ?? providers.first?.models?.first?.id ?? ""; chats.insert(c, at: 0); selectedChatID = c.id; save() }
     func send(_ text: String, attachments: [Attachment] = []) async {
         defer { isSending = false; generation = nil; save() }
         guard let index = chats.firstIndex(where: { $0.id == selectedChatID }), let provider = activeProvider, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty else { return }

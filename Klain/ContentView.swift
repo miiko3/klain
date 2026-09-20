@@ -19,13 +19,21 @@ struct ContentView: View {
     @State private var search = ""
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var path: [UUID] = []
+    @State private var showArchive = false
+    @State private var deleting: UUID?
     var body: some View {
         NavigationStack(path: $path) {
             List {
+                Section { HomeBanner() }
+                Section { SigningReminder() }
+                Picker("Чаты", selection: $showArchive) { Text("Диалоги").tag(false); Text("Архив").tag(true) }.pickerStyle(.segmented)
                 Section("ДИАЛОГИ") {
-                    ForEach(store.chats.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }) { chat in
-                        NavigationLink(value: chat.id) { Label(chat.title, systemImage: "bubble.left").font(.system(.subheadline, design: .monospaced)) }
-                            .swipeActions { Button("Удалить", role: .destructive) { store.deleteChat(chat.id) }.disabled(store.isSending) }
+                    ForEach(store.chats.filter { ($0.archived == true) == showArchive && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)) }) { chat in
+                        NavigationLink(value: chat.id) { Text("\(chat.emoji ?? "💬") \(chat.title)").font(.system(.subheadline, design: .monospaced)) }
+                            .swipeActions(allowsFullSwipe: false) {
+                                Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
+                                Button(showArchive ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !showArchive) }.tint(.orange).disabled(store.isSending)
+                            }
                     }
                 }
             }.searchable(text: $search, prompt: "Найти диалог")
@@ -40,6 +48,10 @@ struct ContentView: View {
                 }
         }
         .preferredColorScheme(.dark).tint(Palette.accent)
+        .confirmationDialog("Удалить чат?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
+            Button("Удалить навсегда", role: .destructive) { if let id = deleting { store.deleteChat(id) }; deleting = nil }
+            Button("Отмена", role: .cancel) { deleting = nil }
+        } message: { Text("Все локальные данные чата, вложения и его статистика будут стёрты. Восстановить их нельзя. Данные у API-провайдера это не удаляет.") }
         .sheet(isPresented: $settings) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
@@ -76,12 +88,12 @@ struct ContentView: View {
                 .toolbar { ToolbarItemGroup(placement: .topBarTrailing) { Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } } }
     }
     private var welcome: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("✳").font(.system(size: 56)).foregroundStyle(Palette.accent)
+        VStack(alignment: .center, spacing: 18) {
+            Text(store.selectedChat?.emoji ?? "✨").font(.system(size: 56))
             Text("Давай начнём.").font(.system(size: 32, weight: .medium, design: .serif))
             Text("Твои модели. Твои идеи.\nОдин спокойный уголок для диалогов.").foregroundStyle(.secondary)
-            Button("Подключить провайдера", systemImage: "plus") { settings = true }.buttonStyle(.bordered)
-        }.padding(.vertical, 55)
+            if store.providers.isEmpty { Button("Подключить провайдера", systemImage: "plus") { settings = true }.buttonStyle(.bordered) }
+        }.multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 300, alignment: .center).padding(.vertical, 24)
     }
     private var modelMenu: some View {
         Menu {
