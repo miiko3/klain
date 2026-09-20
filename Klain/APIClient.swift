@@ -3,6 +3,7 @@ import Foundation
 enum APIEvent {
     case text(String), usage(Usage), remaining(String)
     case media(GeneratedMedia)
+    case thinking(String)
 }
 
 struct APIClient {
@@ -76,6 +77,7 @@ struct APIClient {
                         guard let data = payload.data(using: .utf8), let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
                         if let error = json["error"] as? [String: Any] { throw failure(error["message"] as? String ?? "Ошибка потока API") }
                         if anthropic {
+                            if let delta = json["delta"] as? [String: Any], let text = delta["thinking"] as? String { continuation.yield(.thinking(text)) }
                             if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String { continuation.yield(.text(text)) }
                             let start = (json["message"] as? [String: Any])?["usage"] as? [String: Any]
                             if let u = start ?? json["usage"] as? [String: Any] {
@@ -86,6 +88,7 @@ struct APIClient {
                             }
                         } else {
                             if let choices = json["choices"] as? [[String: Any]], let delta = choices.first?["delta"] as? [String: Any] {
+                                if let thought = delta["reasoning_content"] as? String ?? delta["reasoning"] as? String { continuation.yield(.thinking(thought)) }
                                 if let text = delta["content"] as? String { continuation.yield(.text(text)) }
                                 let parts = (delta["images"] as? [[String: Any]] ?? []) + (delta["content"] as? [[String: Any]] ?? [])
                                 for part in parts {

@@ -6,7 +6,7 @@ struct HomeBanner: View {
             HStack(spacing: 12) {
                 Image("AdLogo").resizable().scaledToFit().frame(width: 54, height: 54).clipShape(RoundedRectangle(cornerRadius: 12))
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Реклама • партнёрская ссылка").font(.caption2).foregroundStyle(.secondary)
+                    Text("Реклама").font(.caption2).foregroundStyle(.secondary)
                     Text("CheapVibeCode").font(.headline)
                     Text("Дешёвые токены для 30+ ИИ-моделей").font(.caption).foregroundStyle(.secondary)
                 }
@@ -28,12 +28,9 @@ struct SigningReminder: View {
                     .font(.subheadline)
                 Text("Напоминание для 7-дневной подписи SideStore/Sideloadly. Отсчёт от первого запуска или ручного сброса, не фактический срок сертификата. Можно обновить подпись без удаления приложения.")
                     .font(.caption2).foregroundStyle(.secondary)
-                Button("Я обновил подпись") { confirmReset = true }.font(.caption)
+                Button("Я обновил приложение") { start = Date().timeIntervalSince1970; confirmReset = true }.font(.caption).buttonStyle(.borderless)
             }
         }.onAppear { if start == 0 { start = Date().timeIntervalSince1970 } }
-            .confirmationDialog("Начать новый отсчёт на 7 дней?", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Начать отсчёт") { start = Date().timeIntervalSince1970 }
-                Button("Отмена", role: .cancel) {}
-            }
+            .alert("Таймер обновлён", isPresented: $confirmReset) { Button("Понятно", role: .cancel) {} } message: { Text("Начат новый отсчёт на 7 дней. Эта кнопка не продлевает подпись приложения.") }
     }
 }

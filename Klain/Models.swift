@@ -32,6 +32,8 @@ struct Message: Identifiable, Codable, Equatable {
     var id = UUID(); var role: String; var text: String; var attachments: [Attachment] = []
     var usage: Usage?
     var failed: Bool?
+    var modelName: String?
+    var thinking: String?
     var media: [GeneratedMedia]?
 }
 struct GeneratedMedia: Codable, Equatable, Identifiable {

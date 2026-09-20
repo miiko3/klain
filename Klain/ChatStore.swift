@@ -38,12 +38,14 @@ import Security
         chats[index].messages.append(Message(role: "user", text: text, attachments: attachments))
         if chats[index].messages.count == 1 { chats[index].title = String((text.isEmpty ? attachments.first?.name ?? "Вложение" : text).prefix(40)) }; let assistant = Message(role: "assistant", text: "")
         chats[index].messages.append(assistant); isSending = true; save()
+        chats[index].messages[chats[index].messages.count - 1].modelName = provider.models?.first(where: { $0.id == chats[index].model })?.name ?? chats[index].model
         var requestChat = chats[index]; requestChat.messages.removeLast()
         let messageIndex = chats[index].messages.count - 1
         var reported: Usage?
         do {
             for try await event in api.stream(chat: requestChat, provider: provider) {
                 switch event {
+                case .thinking(let text): chats[index].messages[messageIndex].thinking = (chats[index].messages[messageIndex].thinking ?? "") + text
                 case .media(let media):
                     if chats[index].messages[messageIndex].media == nil { chats[index].messages[messageIndex].media = [] }
                     if chats[index].messages[messageIndex].media?.contains(media) != true { chats[index].messages[messageIndex].media?.append(media) }

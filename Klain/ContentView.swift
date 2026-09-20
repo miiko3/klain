@@ -21,6 +21,8 @@ struct ContentView: View {
     @State private var path: [UUID] = []
     @State private var showArchive = false
     @State private var deleting: UUID?
+    @State private var gallery = false
+    @State private var camera = false
     var body: some View {
         NavigationStack(path: $path) {
             List {
@@ -39,9 +41,14 @@ struct ContentView: View {
             }.searchable(text: $search, prompt: "Найти диалог")
                 .scrollContentBackground(.hidden).background(Palette.background)
                 .navigationTitle("klain")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) { Button("Новый чат", systemImage: "square.and.pencil") { store.newChat(); if let id = store.selectedChatID { path = [id] } }.disabled(store.isSending) }
-                ToolbarItemGroup(placement: .bottomBar) { Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }; Spacer(); Button("Статистика", systemImage: "chart.bar") { stats = true } }
+                .safeAreaInset(edge: .bottom) {
+                    HStack {
+                        Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }
+                        Spacer()
+                        Button("Статистика", systemImage: "chart.bar") { stats = true }
+                        Spacer()
+                        Button("Новый чат", systemImage: "square.and.pencil") { store.newChat(); if let id = store.selectedChatID { path = [id] } }.disabled(store.isSending)
+                    }.font(.caption).buttonStyle(.borderless).padding().background(Palette.panel).clipShape(RoundedRectangle(cornerRadius: 16)).padding(.horizontal)
                 }
                 .navigationDestination(for: UUID.self) { id in
                     chatDetail.onAppear { store.selectedChatID = id }
@@ -54,6 +61,12 @@ struct ContentView: View {
         } message: { Text("Все локальные данные чата, вложения и его статистика будут стёрты. Восстановить их нельзя. Данные у API-провайдера это не удаляет.") }
         .sheet(isPresented: $settings) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
+        .photosPicker(isPresented: $gallery, selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos]))
+        .onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
+        .sheet(isPresented: $camera) { CameraCapture { data in
+            guard data.count <= 20_000_000, attachments.reduce(0, { $0 + $1.data.count }) + data.count <= 30_000_000 else { error = "Лимит вложений: 30 МБ"; return }
+            attachments.append(Attachment(name: "Фото.jpg", mime: "image/jpeg", data: data))
+        } }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
         .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
     }
@@ -72,11 +85,7 @@ struct ContentView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 24) {
                             if store.selectedChat?.messages.isEmpty != false { welcome }
-                            ForEach(store.selectedChat?.messages ?? []) { message in MessageView(message: message).id(message.id) }
-                            if store.isSending && store.selectedChat?.messages.last?.text.isEmpty == true {
-                                HStack(spacing: 10) { ProgressView(); Text("Думает…").foregroundStyle(.secondary) }
-                                    .padding(.horizontal, 16).accessibilityElement(children: .combine)
-                            }
+                            ForEach(store.selectedChat?.messages ?? []) { message in MessageView(message: message, waiting: store.isSending && message.id == store.selectedChat?.messages.last?.id).id(message.id) }
                             Color.clear.frame(height: 1).id("bottom")
                         }.padding(20)
                     }.scrollDismissesKeyboard(.interactively).onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
@@ -112,9 +121,13 @@ struct ContentView: View {
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7).padding(.top, 4)
             HStack {
-                Button("Файлы", systemImage: "folder") { importing = true }.labelStyle(.iconOnly)
-                PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos])) { Image(systemName: "photo.on.rectangle") }.onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
-                Text("klain / chat").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary)
+                Menu {
+                    Button("Файлы", systemImage: "folder") { importing = true }
+                    Button("Галерея", systemImage: "photo.on.rectangle") { gallery = true }
+                    Button("Фото", systemImage: "camera") {
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) { camera = true } else { error = "Камера недоступна" }
+                    }
+                } label: { Label("Прикрепить", systemImage: "paperclip") }
                 Spacer()
                 if store.isSending { Button("Стоп", systemImage: "stop.circle.fill") { store.stop() } }
                 else { Button { let text = input; let files = attachments; input = ""; attachments = []; store.start(text, attachments: files) } label: { Image(systemName: "arrow.up").fontWeight(.bold).padding(9).background(Palette.accent).foregroundStyle(.black).clipShape(RoundedRectangle(cornerRadius: 8)) }.disabled(store.activeProvider == nil || store.selectedChat?.model.isEmpty != false || (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty)) }
@@ -146,9 +159,19 @@ struct ContentView: View {
 
 struct MessageView: View {
     let message: Message
+    var waiting = false
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(message.role == "user" ? "ТЫ" : "KLAIN", systemImage: message.role == "user" ? "person.crop.circle" : "sparkle").font(.system(.caption, design: .monospaced)).foregroundStyle(Palette.accent)
+            if message.role == "user" || !message.text.isEmpty || !(message.media ?? []).isEmpty {
+                Label(message.role == "user" ? "ТЫ" : message.modelName ?? "Модель", systemImage: message.role == "user" ? "person.crop.circle" : "sparkle").font(.system(.caption, design: .monospaced)).foregroundStyle(Palette.accent)
+            }
+            if message.role == "assistant" && (waiting || message.thinking != nil) {
+                DisclosureGroup {
+                    Text(message.thinking ?? "Провайдер не передаёт текст рассуждений.").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                } label: {
+                    HStack { if waiting && message.text.isEmpty { ProgressView() }; Text(waiting && message.text.isEmpty ? "Думает…" : "Мышление") }
+                }
+            }
             ForEach(message.attachments) { a in Label(a.name, systemImage: "doc").font(.caption).foregroundStyle(.secondary) }
             MarkdownMessage(text: message.text)
             ForEach(message.media ?? []) { media in GeneratedMediaView(media: media) }
