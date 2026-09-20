@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import PhotosUI
 
 enum Palette {
     static let background = Color(red: 0.09, green: 0.09, blue: 0.085)
@@ -16,8 +17,10 @@ struct ContentView: View {
     @State private var attachments: [Attachment] = []
     @State private var error: String?
     @State private var search = ""
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var compactColumn: NavigationSplitViewColumn = .sidebar
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(preferredCompactColumn: $compactColumn) {
             List(selection: $store.selectedChatID) {
                 Section("ДИАЛОГИ") {
                     ForEach(store.chats.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }) { chat in
@@ -27,7 +30,7 @@ struct ContentView: View {
                 }
             }.searchable(text: $search, prompt: "Найти диалог")
                 .scrollContentBackground(.hidden).background(Palette.background)
-                .navigationTitle("klain_")
+                .navigationTitle("klain")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) { Button("Новый чат", systemImage: "square.and.pencil") { store.newChat() }.disabled(store.isSending) }
                     ToolbarItemGroup(placement: .bottomBar) { Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }; Spacer(); Button("Статистика", systemImage: "chart.bar") { stats = true } }
@@ -35,8 +38,8 @@ struct ContentView: View {
         } detail: {
             VStack(spacing: 0) {
                 modelMenu.padding(.horizontal).padding(.vertical, 10)
-                Picker("Мышление", selection: Binding(get: { store.selectedChat?.reasoning ?? "default" }, set: { store.setReasoning($0) })) {
-                    Text("Дефолт").tag("default"); Text("Лоу").tag("low"); Text("Медиум").tag("medium"); Text("Хай").tag("high"); Text("хХай").tag("xhigh"); Text("Макс").tag("max")
+                Picker("Reasoning", selection: Binding(get: { store.selectedChat?.reasoning ?? "default" }, set: { store.setReasoning($0) })) {
+                    Text("Default").tag("default"); Text("Low").tag("low"); Text("Medium").tag("medium"); Text("High").tag("high"); Text("xHigh").tag("xhigh"); Text("Max").tag("max")
                 }.pickerStyle(.menu).disabled(store.isSending)
                 Divider()
                 ScrollViewReader { proxy in
@@ -46,14 +49,15 @@ struct ContentView: View {
                             ForEach(store.selectedChat?.messages ?? []) { message in MessageView(message: message).id(message.id) }
                             Color.clear.frame(height: 1).id("bottom")
                         }.padding(20)
-                    }.onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
+                    }.scrollDismissesKeyboard(.interactively).gesture(DragGesture(minimumDistance: 18).onEnded { value in if value.translation.height > 30 { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } }).onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
                         .onChange(of: store.selectedChatID) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
                 }
                 composer
-            }.background(Palette.background).navigationTitle("klain").navigationBarTitleDisplayMode(.inline)
-                .toolbar { Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } }
+            }.background(Palette.background).navigationTitle("klain").navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden(true)
+                .toolbar { ToolbarItem(placement: .topBarLeading) { Button { compactColumn = .sidebar } label: { Label("Назад", systemImage: "chevron.left") } }; Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } }
         }
         .preferredColorScheme(.dark).tint(Palette.accent)
+        .onChange(of: store.selectedChatID) { _, id in if id != nil { compactColumn = .detail } }
         .sheet(isPresented: $settings) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
@@ -84,7 +88,10 @@ struct ContentView: View {
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7).padding(.top, 4)
             HStack {
-                Button("Прикрепить", systemImage: "paperclip") { importing = true }.labelStyle(.iconOnly)
+                Menu {
+                    Button("Файлы", systemImage: "folder") { importing = true }
+                    PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos])) { Label("Галерея", systemImage: "photo.on.rectangle") }
+                } label: { Image(systemName: "paperclip") }.onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
                 Text("klain / chat").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary)
                 Spacer()
                 if store.isSending { Button("Стоп", systemImage: "stop.circle.fill") { store.stop() } }
@@ -101,6 +108,17 @@ struct ContentView: View {
                 attachments.append(Attachment(name: url.lastPathComponent, mime: UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream", data: try Data(contentsOf: url)))
             }
         } catch { self.error = error.localizedDescription }
+    }
+    private func importPhotos(_ items: [PhotosPickerItem]) async {
+        for item in items {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else { throw URLError(.cannotDecodeContentData) }
+                guard data.count <= 20_000_000, attachments.reduce(0, { $0 + $1.data.count }) + data.count <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
+                let type = item.supportedContentTypes.first?.preferredMIMEType ?? "application/octet-stream"
+                await MainActor.run { attachments.append(Attachment(name: "Медиа \(attachments.count + 1)", mime: type, data: data)) }
+            } catch { await MainActor.run { error = error.localizedDescription } }
+        }
+        await MainActor.run { photoItems = [] }
     }
 }
 

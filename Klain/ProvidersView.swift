@@ -32,6 +32,11 @@ struct ProvidersView: View {
                     ForEach(ProviderPreset.all) { preset in Button { editing = Provider(name: preset.name, baseURL: preset.url, apiKey: "", kind: preset.id, slug: preset.id) } label: { Label(preset.name, systemImage: preset.symbol).padding(.vertical, 7) } }
                 }
                 Section { Text("Ключи и пользовательские заголовки хранятся в Keychain. Список моделей приходит от провайдера: доступ зависит от тарифа и прав ключа.").font(.caption).foregroundStyle(.secondary) }
+                Section("АВТОР KLAIN") {
+                    Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
+                    Link(destination: URL(string: "https://www.threads.com/@demodeca")!) { Label("Threads · @demodeca", systemImage: "at") }
+                    Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
+                }
             }.scrollContentBackground(.hidden).background(Palette.background)
                 .navigationTitle("Провайдеры").toolbar { Button("Готово") { dismiss() } }
                 .sheet(item: $editing) { ProviderEditor(provider: $0) }
