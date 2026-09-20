@@ -47,10 +47,14 @@ struct ContentView: View {
     }
     private var chatDetail: some View {
             VStack(spacing: 0) {
-                modelMenu.padding(.horizontal).padding(.vertical, 10)
-                Picker("Reasoning", selection: Binding(get: { store.selectedChat?.reasoning ?? "default" }, set: { store.setReasoning($0) })) {
-                    Text("Default").tag("default"); Text("Low").tag("low"); Text("Medium").tag("medium"); Text("High").tag("high"); Text("xHigh").tag("xhigh"); Text("Max").tag("max")
-                }.pickerStyle(.menu).disabled(store.isSending)
+                HStack {
+                    modelMenu
+                    Menu {
+                        ForEach(["default", "low", "medium", "high", "xhigh", "max"], id: \.self) { level in
+                            Button { store.setReasoning(level) } label: { Label(level == "xhigh" ? "xHigh" : level.capitalized, systemImage: store.selectedChat?.reasoning == level ? "checkmark" : "brain") }
+                        }
+                    } label: { Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain").font(.caption).padding(10).background(Palette.panel).clipShape(Capsule()) }.disabled(store.isSending)
+                }.padding(.horizontal).padding(.vertical, 10)
                 Divider()
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -86,7 +90,7 @@ struct ContentView: View {
             }
             Button("Настроить модели…") { settings = true }
         } label: {
-            HStack { Circle().fill(Palette.accent).frame(width: 7, height: 7); Text(store.activeProvider?.name ?? "Подключить API"); Text(store.selectedChat?.model ?? "").foregroundStyle(.secondary).lineLimit(1); Spacer(); Image(systemName: "chevron.down") }.font(.system(.caption, design: .monospaced))
+            HStack { Text(store.selectedChat?.model ?? "Выбрать модель").lineLimit(1); Spacer(); Image(systemName: "chevron.down") }.font(.system(.caption, design: .monospaced)).padding(10).background(Palette.panel).clipShape(Capsule())
         }.disabled(store.isSending)
     }
     private var composer: some View {
@@ -134,7 +138,7 @@ struct MessageView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label(message.role == "user" ? "ТЫ" : "KLAIN", systemImage: message.role == "user" ? "person.crop.circle" : "sparkle").font(.system(.caption, design: .monospaced)).foregroundStyle(Palette.accent)
             ForEach(message.attachments) { a in Label(a.name, systemImage: "doc").font(.caption).foregroundStyle(.secondary) }
-            Text(.init(message.text)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+            MarkdownMessage(text: message.text)
             ForEach(message.media ?? []) { media in GeneratedMediaView(media: media) }
             if let u = message.usage { Text("↑ \(u.input.map(String.init) ?? "—")   ↓ \(u.output.map(String.init) ?? "—") токенов").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary) }
         }.padding(16).background(message.role == "user" ? Palette.panel : Color.clear).clipShape(RoundedRectangle(cornerRadius: 12))
