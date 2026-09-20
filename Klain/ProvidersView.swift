@@ -57,6 +57,8 @@ struct ProviderEditor: View {
     @State private var loading = false
     @State private var ready = false
     @State private var saved = false
+    @State private var showMediaNotice = false
+    private let mediaNotice = "Добавление API-ключа не гарантирует генерацию изображений, видео и аудио. В klain и похожих чат-клиентах она доступна только при поддержке со стороны приложения, API-провайдера и выбранной модели. Для CheapVibeCode поддержка генерации медиа не подтверждена."
     @Environment(\.scenePhase) private var scenePhase
     var body: some View {
         NavigationStack {
@@ -66,6 +68,7 @@ struct ProviderEditor: View {
                     TextField("Отображаемое имя", text: $provider.name)
                     TextField("Базовый URL", text: $provider.baseURL).keyboardType(.URL)
                     SecureField("Ключ API (необязательно)", text: $provider.apiKey)
+                    Text(mediaNotice).font(.caption).foregroundStyle(.secondary)
                     Text("Для своего шлюза можно оставить ключ пустым и задать авторизацию через заголовки.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("МОДЕЛИ") {
@@ -98,6 +101,7 @@ struct ProviderEditor: View {
                 .onChange(of: slug) { _, _ in persistDraft() }
                 .onChange(of: scenePhase) { _, _ in persistDraft() }
                 .onDisappear { persistDraft() }
+                .alert("О генерации медиа", isPresented: $showMediaNotice) { Button("Понятно") { dismiss() } } message: { Text(mediaNotice) }
         }.preferredColorScheme(.dark).tint(Palette.accent)
     }
     private func save() {
@@ -107,7 +111,7 @@ struct ProviderEditor: View {
         guard !models.isEmpty, models.allSatisfy({ !$0.id.trimmingCharacters(in: .whitespaces).isEmpty }), Set(models.map(\.id)).count == models.count else { error = "Добавь хотя бы одну модель с уникальным ID"; return }
         guard headers.allSatisfy({ $0.name.range(of: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", options: .regularExpression) != nil && !$0.value.contains("\n") && !$0.value.contains("\r") }) else { error = "Некорректный HTTP-заголовок"; return }
         provider.slug = slug; provider.models = models; provider.headers = headers
-        do { try store.configure(provider); try store.deleteDraft(provider.id); saved = true; if store.activeProvider?.id == provider.id || store.activeProvider == nil { store.select(provider, model: models.first!.id) }; dismiss() } catch { self.error = error.localizedDescription }
+        do { try store.configure(provider); try store.deleteDraft(provider.id); saved = true; if store.activeProvider?.id == provider.id || store.activeProvider == nil { store.select(provider, model: models.first!.id) }; showMediaNotice = true } catch { self.error = error.localizedDescription }
     }
     private func persistDraft() { guard ready, !saved else { return }; var draft = provider; draft.models = models; draft.headers = headers; draft.slug = slug; store.saveDraft(draft) }
 }
