@@ -43,6 +43,9 @@ import Security
         do {
             for try await event in api.stream(chat: requestChat, provider: provider) {
                 switch event {
+                case .media(let media):
+                    if chats[index].messages[messageIndex].media == nil { chats[index].messages[messageIndex].media = [] }
+                    if chats[index].messages[messageIndex].media?.contains(media) != true { chats[index].messages[messageIndex].media?.append(media) }
                 case .text(let text): chats[index].messages[messageIndex].text += text
                 case .usage(let usage): reported = usage; chats[index].messages[messageIndex].usage = usage
                 case .remaining(let value): remaining[provider.id] = value + "\nОбновлено: \(Date().formatted())"

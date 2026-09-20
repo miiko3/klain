@@ -132,6 +132,7 @@ struct MessageView: View {
             Label(message.role == "user" ? "ТЫ" : "KLAIN", systemImage: message.role == "user" ? "person.crop.circle" : "sparkle").font(.system(.caption, design: .monospaced)).foregroundStyle(Palette.accent)
             ForEach(message.attachments) { a in Label(a.name, systemImage: "doc").font(.caption).foregroundStyle(.secondary) }
             Text(.init(message.text)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+            ForEach(message.media ?? []) { media in GeneratedMediaView(media: media) }
             if let u = message.usage { Text("↑ \(u.input.map(String.init) ?? "—")   ↓ \(u.output.map(String.init) ?? "—") токенов").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary) }
         }.padding(16).background(message.role == "user" ? Palette.panel : Color.clear).clipShape(RoundedRectangle(cornerRadius: 12))
     }

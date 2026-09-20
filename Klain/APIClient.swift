@@ -2,6 +2,7 @@ import Foundation
 
 enum APIEvent {
     case text(String), usage(Usage), remaining(String)
+    case media(GeneratedMedia)
 }
 
 struct APIClient {
@@ -26,7 +27,7 @@ struct APIClient {
         for _ in 0..<100 {
             let (data, response) = try await URLSession.shared.data(for: request(provider, path: path)); try validate(response)
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], let items = json["data"] as? [[String: Any]] else { throw failure("Провайдер не вернул список моделей. Добавь ID вручную.") }
-            result += items.compactMap { item in guard let id = item["id"] as? String else { return nil }; return ModelEntry(id: id, name: item["display_name"] as? String ?? item["name"] as? String ?? id) }
+            result += items.compactMap { item in guard let id = item["id"] as? String else { return nil }; return ModelEntry(id: id, name: item["display_name"] as? String ?? item["name"] as? String ?? id, outputModalities: (item["architecture"] as? [String: Any])?["output_modalities"] as? [String]) }
             guard provider.kind == "anthropic", json["has_more"] as? Bool == true, let last = json["last_id"] as? String, let encoded = last.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { break }
             path = "/models?after_id=\(encoded)"
         }
@@ -50,6 +51,7 @@ struct APIClient {
                     var body: [String: Any] = ["model": chat.model, "stream": true, "messages": try chat.messages.filter { $0.failed != true }.map { try message($0, provider: provider) }]
                     if anthropic { body["max_tokens"] = 8192 }
                     else { body["stream_options"] = ["include_usage": true] }
+                    if URL(string: provider.baseURL)?.host == "openrouter.ai", let outputs = provider.models?.first(where: { $0.id == chat.model })?.outputModalities, outputs.contains("image") { body["modalities"] = outputs }
                     if let effort = chat.reasoning, effort != "default" {
                         if anthropic {
                             body["thinking"] = ["type": "adaptive"]
@@ -83,7 +85,15 @@ struct APIClient {
                                 continuation.yield(.usage(usage))
                             }
                         } else {
-                            if let choices = json["choices"] as? [[String: Any]], let delta = choices.first?["delta"] as? [String: Any], let text = delta["content"] as? String { continuation.yield(.text(text)) }
+                            if let choices = json["choices"] as? [[String: Any]], let delta = choices.first?["delta"] as? [String: Any] {
+                                if let text = delta["content"] as? String { continuation.yield(.text(text)) }
+                                let parts = (delta["images"] as? [[String: Any]] ?? []) + (delta["content"] as? [[String: Any]] ?? [])
+                                for part in parts {
+                                    if let text = part["text"] as? String { continuation.yield(.text(text)) }
+                                    if let image = part["image_url"] as? [String: Any], let url = image["url"] as? String { continuation.yield(.media(GeneratedMedia(url: url, kind: "image"))) }
+                                    if let video = part["video_url"] as? [String: Any], let url = video["url"] as? String { continuation.yield(.media(GeneratedMedia(url: url, kind: "video"))) }
+                                }
+                            }
                             if let u = json["usage"] as? [String: Any] {
                                 usage.input = u["prompt_tokens"] as? Int ?? usage.input
                                 usage.output = u["completion_tokens"] as? Int ?? usage.output

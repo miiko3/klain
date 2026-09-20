@@ -9,6 +9,7 @@ struct Provider: Identifiable, Codable, Equatable {
 }
 struct ModelEntry: Identifiable, Codable, Equatable {
     var id: String; var name: String
+    var outputModalities: [String]?
 }
 struct HeaderEntry: Identifiable, Codable, Equatable {
     var id = UUID(); var name = ""; var value = ""
@@ -29,6 +30,12 @@ struct Message: Identifiable, Codable, Equatable {
     var id = UUID(); var role: String; var text: String; var attachments: [Attachment] = []
     var usage: Usage?
     var failed: Bool?
+    var media: [GeneratedMedia]?
+}
+struct GeneratedMedia: Codable, Equatable, Identifiable {
+    var id: String { url }
+    var url: String
+    var kind: String
 }
 struct Attachment: Identifiable, Codable, Equatable {
     var id = UUID(); var name: String; var mime: String; var data: Data
