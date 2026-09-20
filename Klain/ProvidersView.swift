@@ -34,7 +34,7 @@ struct ProvidersView: View {
                 Section { Text("Ключи и пользовательские заголовки хранятся в Keychain. Список моделей приходит от провайдера: доступ зависит от тарифа и прав ключа.").font(.caption).foregroundStyle(.secondary) }
                 Section("АВТОР KLAIN") {
                     Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
-                    Link(destination: URL(string: "https://www.threads.com/@demodeca")!) { Label("Threads · @demodeca", systemImage: "at") }
+                    Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
                     Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
                 }
             }.scrollContentBackground(.hidden).background(Palette.background)

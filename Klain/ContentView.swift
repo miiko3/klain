@@ -48,7 +48,7 @@ struct ContentView: View {
                         Button("Статистика", systemImage: "chart.bar") { stats = true }
                         Spacer()
                         Button("Новый чат", systemImage: "square.and.pencil") { store.newChat(); if let id = store.selectedChatID { path = [id] } }.disabled(store.isSending)
-                    }.font(.caption).buttonStyle(.borderless).padding().background(Palette.panel).clipShape(RoundedRectangle(cornerRadius: 16)).padding(.horizontal)
+                    }.font(.system(size: 15, weight: .semibold)).labelStyle(HomeActionLabelStyle()).buttonStyle(.borderless).frame(minHeight: 76).padding(.horizontal, 10).background(Palette.panel).clipShape(RoundedRectangle(cornerRadius: 18)).padding(.horizontal, 12).padding(.bottom, 20)
                 }
                 .navigationDestination(for: UUID.self) { id in
                     chatDetail.onAppear { store.selectedChatID = id }
