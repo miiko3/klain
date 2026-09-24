@@ -25,7 +25,7 @@ struct StatisticsView: View {
                     ForEach(store.providers) { p in VStack(alignment: .leading, spacing: 8) { Text(p.name); Text(store.remaining[p.id] ?? "Остаток токенов: нет данных").font(.caption).foregroundStyle(.secondary); Text(balances[p.id] ?? "Баланс: не запрошен").font(.caption).foregroundStyle(.secondary) } }
                     Button("Обновить баланс") { loading = true; Task { for p in store.providers { do { balances[p.id] = try await APIClient().balance(provider: p) + "\n" + Date().formatted() } catch { balances[p.id] = error.localizedDescription } }; loading = false } }.disabled(loading)
                     if loading { ProgressView() }
-                    Text("Rate limit — временный лимит запросов, а не купленные токены. Баланс ключа доступен для OpenRouter. Остальные значения показываются только при наличии в заголовках API.").font(.caption).foregroundStyle(.secondary)
+                    Text("Rate limit — временный лимит запросов, а не купленные токены. Баланс доступен для OpenRouter и CheapVibeCode. Остальные значения показываются только при наличии в заголовках API.").font(.caption).foregroundStyle(.secondary)
                 }
             }.scrollContentBackground(.hidden).background(Palette.background).navigationTitle("Статистика").toolbar { Button("Готово") { dismiss() } }
         }.preferredColorScheme(.dark).tint(Palette.accent)

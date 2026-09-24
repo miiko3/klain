@@ -36,11 +36,22 @@ struct APIClient {
         return result.filter { seen.insert($0.id).inserted }.sorted { $0.id < $1.id }
     }
     func balance(provider: Provider) async throws -> String {
-        guard URL(string: provider.baseURL)?.host == "openrouter.ai" else { return "Баланс: нет данных API" }
-        let (data, response) = try await URLSession.shared.data(for: request(provider, path: "/key")); try validate(response)
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        if let info = json?["data"] as? [String: Any], let remaining = info["limit_remaining"] as? Double { return String(format: "Остаток лимита ключа: $%.4f", remaining) }
-        return "Лимит ключа не задан; баланс счёта неизвестен"
+        let host = URL(string: provider.baseURL)?.host
+        if host == "openrouter.ai" {
+            let (data, response) = try await URLSession.shared.data(for: request(provider, path: "/key")); try validate(response)
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let info = json?["data"] as? [String: Any], let remaining = info["limit_remaining"] as? Double { return String(format: "Остаток лимита ключа: $%.4f", remaining) }
+            return "Лимит ключа не задан; баланс счёта неизвестен"
+        }
+        if host?.hasSuffix("cheapvibecode.ru") == true {
+            let (data, response) = try await URLSession.shared.data(for: request(provider, path: "/balance")); try validate(response)
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let value = (json?["balance"] as? Double) ?? (json?["data"] as? [String: Any]).flatMap { $0["balance"] as? Double } ?? (json?["limit_remaining"] as? Double)
+            if let value { return String(format: "Доступно по ключу: $%.4f", value) }
+            if let text = json?["balance"] as? String, !text.isEmpty { return "Доступно по ключу: \(text)" }
+            return "Провайдер вернул ответ без распознанной суммы баланса"
+        }
+        return "Баланс: нет данных API"
     }
     func stream(chat: Chat, provider: Provider) -> AsyncThrowingStream<APIEvent, Error> {
         AsyncThrowingStream { continuation in
