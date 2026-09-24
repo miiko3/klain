@@ -16,43 +16,16 @@ struct ContentView: View {
     @State private var importing = false
     @State private var attachments: [Attachment] = []
     @State private var error: String?
-    @State private var search = ""
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var path: [UUID] = []
-    @State private var showArchive = false
     @State private var deleting: UUID?
     @State private var gallery = false
     @State private var camera = false
+    @State private var tab = 0
     var body: some View {
-        NavigationStack(path: $path) {
-            List {
-                Section { HomeBanner() }
-                Section { SigningReminder() }
-                Picker("Чаты", selection: $showArchive) { Text("Диалоги").tag(false); Text("Архив").tag(true) }.pickerStyle(.segmented)
-                Section("ДИАЛОГИ") {
-                    ForEach(store.chats.filter { ($0.archived == true) == showArchive && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)) }) { chat in
-                        NavigationLink(value: chat.id) { Text("\(chat.emoji ?? "💬") \(chat.title)").font(.system(.subheadline, design: .monospaced)) }
-                            .swipeActions(allowsFullSwipe: false) {
-                                Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
-                                Button(showArchive ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !showArchive) }.tint(.orange).disabled(store.isSending)
-                            }
-                    }
-                }
-            }.searchable(text: $search, prompt: "Найти диалог")
-                .scrollContentBackground(.hidden).background(Palette.background)
-                .navigationTitle("klain")
-                .safeAreaInset(edge: .bottom) {
-                    HStack {
-                        Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }
-                        Spacer()
-                        Button("Статистика", systemImage: "chart.bar") { stats = true }
-                        Spacer()
-                        Button("Новый чат", systemImage: "square.and.pencil") { store.newChat(); if let id = store.selectedChatID { path = [id] } }.disabled(store.isSending)
-                    }.font(.system(size: 15, weight: .semibold)).labelStyle(HomeActionLabelStyle()).buttonStyle(.borderless).frame(minHeight: 76).padding(.horizontal, 10).background(Palette.panel).clipShape(RoundedRectangle(cornerRadius: 18)).padding(.horizontal, 12).padding(.bottom, 20)
-                }
-                .navigationDestination(for: UUID.self) { id in
-                    chatDetail.onAppear { store.selectedChatID = id }
-                }
+        TabView(selection: $tab) {
+            chatsTab.tag(0)
+            settingsTab.tag(1)
         }
         .preferredColorScheme(.dark).tint(Palette.accent)
         .confirmationDialog("Удалить чат?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
@@ -69,6 +42,69 @@ struct ContentView: View {
         } }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
         .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
+    }
+    private var chatsTab: some View {
+        NavigationStack(path: $path) {
+            List {
+                Section { HomeBanner() }
+                Section { SigningReminder() }
+                if store.activeChats.isEmpty && store.archivedChats.isEmpty {
+                    Section { emptyChats }
+                } else {
+                    if !store.activeChats.isEmpty {
+                        Section("ДИАЛОГИ") { chatRows(store.activeChats, archived: false) }
+                    }
+                    if !store.archivedChats.isEmpty {
+                        Section("АРХИВЫ") { chatRows(store.archivedChats, archived: true) }
+                    }
+                }
+            }.scrollContentBackground(.hidden).background(Palette.background)
+                .navigationTitle("klain")
+                .toolbar {
+                    if !store.activeChats.isEmpty {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button { store.newChat(); if let id = store.selectedChatID { path = [id] } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
+                        }
+                    }
+                }
+                .navigationDestination(for: UUID.self) { id in
+                    chatDetail.onAppear { store.selectedChatID = id }
+                }
+        }
+    }
+    private func chatRows(_ chats: [Chat], archived: Bool) -> some View {
+        ForEach(chats) { chat in
+            NavigationLink(value: chat.id) { Text("\(chat.emoji ?? "💬") \(chat.title)").font(.system(.subheadline, design: .monospaced)) }
+                .swipeActions(allowsFullSwipe: false) {
+                    Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
+                    Button(archived ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !archived) }.tint(.orange).disabled(store.isSending)
+                }
+        }
+    }
+    private var emptyChats: some View {
+        VStack(spacing: 14) {
+            Text("🪄").font(.system(size: 54))
+            Text("Чатов пока нет,\nно творить волшебство можно начать в любой момент").multilineTextAlignment(.center).foregroundStyle(.secondary)
+            Button { store.newChat(); if let id = store.selectedChatID { path = [id] } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.buttonStyle(.borderedProminent).disabled(store.isSending)
+        }.frame(maxWidth: .infinity).padding(.vertical, 36)
+    }
+    private var settingsTab: some View {
+        NavigationStack {
+            List {
+                Section("НАСТРОЙКИ") {
+                    Button { settings = true } label: { Label("Провайдеры", systemImage: "slider.horizontal.3") }
+                    Button { stats = true } label: { Label("Статистика", systemImage: "chart.bar") }
+                }
+                Section("АВТОР") {
+                    Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
+                    Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
+                    Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
+                    Link(destination: URL(string: "https://boosty.to/miilo3")!) { Label("Boosty · поддержать", systemImage: "heart") }
+                }
+                Section { Text("klain — песочница для запросов к ИИ по твоим API-ключам. Генерация фото, видео и аудио недоступна.").font(.caption).foregroundStyle(.secondary) }
+            }.scrollContentBackground(.hidden).background(Palette.background)
+                .navigationTitle("Настройки")
+        }
     }
     private var chatDetail: some View {
             VStack(spacing: 0) {

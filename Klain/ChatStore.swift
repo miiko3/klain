@@ -31,6 +31,8 @@ import Security
     func setModel(_ model: String) { if let i = chats.firstIndex(where: { $0.id == selectedChatID }) { chats[i].model = model; save() } }
     func setReasoning(_ value: String) { if let i = chats.firstIndex(where: { $0.id == selectedChatID }) { chats[i].reasoning = value; save() } }
     var selectedChat: Chat? { chats.first { $0.id == selectedChatID } }
+    var activeChats: [Chat] { chats.filter { $0.archived != true } }
+    var archivedChats: [Chat] { chats.filter { $0.archived == true } }
     func newChat() { guard !isSending else { return }; var c = Chat(); c.emoji = ["🌿", "🪐", "🦊", "✨", "🌊", "🍀", "🚀", "🐈", "🌻", "🦋"].randomElement(); c.providerID = activeProvider?.id; c.model = selectedChat?.model ?? providers.first?.models?.first?.id ?? ""; chats.insert(c, at: 0); selectedChatID = c.id; save() }
     func send(_ text: String, attachments: [Attachment] = []) async {
         defer { isSending = false; generation = nil; save() }
