@@ -21,11 +21,16 @@ struct ContentView: View {
     @State private var deleting: UUID?
     @State private var gallery = false
     @State private var camera = false
-    @State private var tab = 0
+    @State private var showChats = false
+    @State private var showSettings = false
     var body: some View {
-        TabView(selection: $tab) {
-            chatsTab.tag(0)
-            settingsTab.tag(1)
+        NavigationStack(path: $path) {
+            home
+                .navigationDestination(isPresented: $showChats) { chatsList }
+                .navigationDestination(isPresented: $showSettings) { settingsList }
+                .navigationDestination(for: UUID.self) { id in
+                    chatDetail.onAppear { store.selectedChatID = id }
+                }
         }
         .preferredColorScheme(.dark).tint(Palette.accent)
         .confirmationDialog("Удалить чат?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
@@ -43,34 +48,52 @@ struct ContentView: View {
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
         .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
     }
-    private var chatsTab: some View {
-        NavigationStack(path: $path) {
-            List {
-                Section { HomeBanner() }
-                Section { SigningReminder() }
-                if store.activeChats.isEmpty && store.archivedChats.isEmpty {
-                    Section { emptyChats }
-                } else {
-                    if !store.activeChats.isEmpty {
-                        Section("ДИАЛОГИ") { chatRows(store.activeChats, archived: false) }
-                    }
-                    if !store.archivedChats.isEmpty {
-                        Section("АРХИВЫ") { chatRows(store.archivedChats, archived: true) }
+    private var home: some View {
+        List {
+            Section { HomeBanner() }
+            Section { SigningReminder() }
+        }.scrollContentBackground(.hidden).background(Palette.background)
+            .navigationTitle("klain")
+            .safeAreaInset(edge: .bottom) { homeMenu }
+    }
+    private var homeMenu: some View {
+        HStack(spacing: 10) {
+            menuButton("Чаты", icon: "bubble.left.and.bubble.right", action: { showChats = true })
+            menuButton("Настройки", icon: "slider.horizontal.3", action: { showSettings = true })
+        }.padding(.horizontal, 18).padding(.vertical, 12)
+            .background(Palette.panel.clipShape(RoundedRectangle(cornerRadius: 22)))
+            .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.12)))
+            .padding(.horizontal).padding(.bottom, 30)
+    }
+    private func menuButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 7) {
+                Image(systemName: icon).font(.system(size: 24, weight: .medium))
+                Text(title).font(.system(size: 17, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+            }.frame(maxWidth: .infinity, minHeight: 62).contentShape(Rectangle())
+        }.buttonStyle(.borderless).foregroundStyle(Palette.accent)
+    }
+    private var chatsList: some View {
+        List {
+            if store.activeChats.isEmpty && store.archivedChats.isEmpty {
+                Section { emptyChats }
+            } else {
+                if !store.activeChats.isEmpty {
+                    Section("ДИАЛОГИ") { chatRows(store.activeChats, archived: false) }
+                }
+                if !store.archivedChats.isEmpty {
+                    Section("АРХИВЫ") { chatRows(store.archivedChats, archived: true) }
+                }
+            }
+        }.scrollContentBackground(.hidden).background(Palette.background)
+            .navigationTitle("Чаты").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if !store.activeChats.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { store.newChat(); if let id = store.selectedChatID { path.append(id) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
                     }
                 }
-            }.scrollContentBackground(.hidden).background(Palette.background)
-                .navigationTitle("klain")
-                .toolbar {
-                    if !store.activeChats.isEmpty {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button { store.newChat(); if let id = store.selectedChatID { path = [id] } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
-                        }
-                    }
-                }
-                .navigationDestination(for: UUID.self) { id in
-                    chatDetail.onAppear { store.selectedChatID = id }
-                }
-        }
+            }
     }
     private func chatRows(_ chats: [Chat], archived: Bool) -> some View {
         ForEach(chats) { chat in
@@ -85,26 +108,24 @@ struct ContentView: View {
         VStack(spacing: 14) {
             Text("🪄").font(.system(size: 54))
             Text("Чатов пока нет,\nно творить волшебство можно начать в любой момент").multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Button { store.newChat(); if let id = store.selectedChatID { path = [id] } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.buttonStyle(.borderedProminent).disabled(store.isSending)
+            Button { store.newChat(); if let id = store.selectedChatID { path.append(id) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.buttonStyle(.borderedProminent).disabled(store.isSending)
         }.frame(maxWidth: .infinity).padding(.vertical, 36)
     }
-    private var settingsTab: some View {
-        NavigationStack {
-            List {
-                Section("НАСТРОЙКИ") {
-                    Button { settings = true } label: { Label("Провайдеры", systemImage: "slider.horizontal.3") }
-                    Button { stats = true } label: { Label("Статистика", systemImage: "chart.bar") }
-                }
-                Section("АВТОР") {
-                    Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
-                    Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
-                    Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
-                    Link(destination: URL(string: "https://boosty.to/miilo3")!) { Label("Boosty · поддержать", systemImage: "heart") }
-                }
-                Section { Text("klain — песочница для запросов к ИИ по твоим API-ключам. Генерация фото, видео и аудио недоступна.").font(.caption).foregroundStyle(.secondary) }
-            }.scrollContentBackground(.hidden).background(Palette.background)
-                .navigationTitle("Настройки")
-        }
+    private var settingsList: some View {
+        List {
+            Section("НАСТРОЙКИ") {
+                Button { settings = true } label: { Label("Провайдеры", systemImage: "slider.horizontal.3") }
+                Button { stats = true } label: { Label("Статистика", systemImage: "chart.bar") }
+            }
+            Section("АВТОР") {
+                Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
+                Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
+                Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
+                Link(destination: URL(string: "https://boosty.to/miilo3")!) { Label("Boosty · поддержать", systemImage: "heart") }
+            }
+            Section { Text("klain — песочница для запросов к ИИ по твоим API-ключам. Генерация фото, видео и аудио недоступна.").font(.caption).foregroundStyle(.secondary) }
+        }.scrollContentBackground(.hidden).background(Palette.background)
+            .navigationTitle("Настройки").navigationBarTitleDisplayMode(.inline)
     }
     private var chatDetail: some View {
             VStack(spacing: 0) {
