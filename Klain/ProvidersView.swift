@@ -20,7 +20,11 @@ struct ProvidersView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("ЧЕРНОВИКИ") { ForEach(store.drafts) { p in Button(p.name) { editing = p } } }
+                Section("ЧЕРНОВИКИ") {
+                    if store.drafts.isEmpty { Text("Нет черновиков").foregroundStyle(.secondary) }
+                    ForEach(store.drafts) { p in Button { editing = p } label: { Label(p.name.isEmpty ? "Новый провайдер" : p.name, systemImage: "square.and.pencil") }
+                        .swipeActions { Button("Удалить", role: .destructive) { do { try store.deleteDraft(p.id) } catch { self.error = error.localizedDescription } } } }
+                }
                 Section("ПОДКЛЮЧЕНО") {
                     if store.providers.isEmpty { Text("Добавь свой первый API-ключ").foregroundStyle(.secondary) }
                     ForEach(store.providers) { p in
@@ -32,11 +36,6 @@ struct ProvidersView: View {
                     ForEach(ProviderPreset.all) { preset in Button { editing = Provider(name: preset.name, baseURL: preset.url, apiKey: "", kind: preset.id, slug: preset.id) } label: { Label(preset.name, systemImage: preset.symbol).padding(.vertical, 7) } }
                 }
                 Section { Text("Ключи и пользовательские заголовки хранятся в Keychain. Список моделей приходит от провайдера: доступ зависит от тарифа и прав ключа.").font(.caption).foregroundStyle(.secondary) }
-                Section("АВТОР KLAIN") {
-                    Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
-                    Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
-                    Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
-                }
             }.scrollContentBackground(.hidden).background(Palette.background)
                 .navigationTitle("Провайдеры").toolbar { Button("Готово") { dismiss() } }
                 .sheet(item: $editing) { ProviderEditor(provider: $0) }
@@ -111,7 +110,7 @@ struct ProviderEditor: View {
         guard !models.isEmpty, models.allSatisfy({ !$0.id.trimmingCharacters(in: .whitespaces).isEmpty }), Set(models.map(\.id)).count == models.count else { error = "Добавь хотя бы одну модель с уникальным ID"; return }
         guard headers.allSatisfy({ $0.name.range(of: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", options: .regularExpression) != nil && !$0.value.contains("\n") && !$0.value.contains("\r") }) else { error = "Некорректный HTTP-заголовок"; return }
         provider.slug = slug; provider.models = models; provider.headers = headers
-        do { try store.configure(provider); try store.deleteDraft(provider.id); saved = true; if store.activeProvider?.id == provider.id || store.activeProvider == nil { store.select(provider, model: models.first!.id) }; showMediaNotice = true } catch { self.error = error.localizedDescription }
+        do { try store.configure(provider); try store.deleteDrafts(matching: provider); saved = true; if store.activeProvider?.id == provider.id || store.activeProvider == nil { store.select(provider, model: models.first!.id) }; showMediaNotice = true } catch { self.error = error.localizedDescription }
     }
     private func persistDraft() { guard ready, !saved else { return }; var draft = provider; draft.models = models; draft.headers = headers; draft.slug = slug; store.saveDraft(draft) }
 }

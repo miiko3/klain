@@ -8,6 +8,10 @@ enum Palette {
     static let accent = Color(red: 0.82, green: 0.48, blue: 0.35)
 }
 
+enum Route: Hashable {
+    case chats, settings, chat(UUID)
+}
+
 struct ContentView: View {
     @EnvironmentObject var store: ChatStore
     @State private var input = ""
@@ -17,19 +21,19 @@ struct ContentView: View {
     @State private var attachments: [Attachment] = []
     @State private var error: String?
     @State private var photoItems: [PhotosPickerItem] = []
-    @State private var path: [UUID] = []
+    @State private var path: [Route] = []
     @State private var deleting: UUID?
     @State private var gallery = false
     @State private var camera = false
-    @State private var showChats = false
-    @State private var showSettings = false
     var body: some View {
         NavigationStack(path: $path) {
             home
-                .navigationDestination(isPresented: $showChats) { chatsList }
-                .navigationDestination(isPresented: $showSettings) { settingsList }
-                .navigationDestination(for: UUID.self) { id in
-                    chatDetail.onAppear { store.selectedChatID = id }
+                .navigationDestination(for: Route.self) { route in
+                    switch route {
+                    case .chats: chatsList
+                    case .settings: settingsList
+                    case .chat(let id): chatDetail.onAppear { store.selectedChatID = id }
+                    }
                 }
         }
         .preferredColorScheme(.dark).tint(Palette.accent)
@@ -58,8 +62,8 @@ struct ContentView: View {
     }
     private var homeMenu: some View {
         HStack(spacing: 10) {
-            menuButton("Чаты", icon: "bubble.left.and.bubble.right", action: { showChats = true })
-            menuButton("Настройки", icon: "slider.horizontal.3", action: { showSettings = true })
+            menuButton("Чаты", icon: "bubble.left.and.bubble.right", action: { path.append(.chats) })
+            menuButton("Настройки", icon: "slider.horizontal.3", action: { path.append(.settings) })
         }.padding(.horizontal, 18).padding(.vertical, 12)
             .background(Palette.panel.clipShape(RoundedRectangle(cornerRadius: 22)))
             .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.12)))
@@ -90,14 +94,14 @@ struct ContentView: View {
             .toolbar {
                 if !store.activeChats.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button { store.newChat(); if let id = store.selectedChatID { path.append(id) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
+                        Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
                     }
                 }
             }
     }
     private func chatRows(_ chats: [Chat], archived: Bool) -> some View {
         ForEach(chats) { chat in
-            NavigationLink(value: chat.id) { Text("\(chat.emoji ?? "💬") \(chat.title)").font(.system(.subheadline, design: .monospaced)) }
+            NavigationLink(value: Route.chat(chat.id)) { Text("\(chat.emoji ?? "💬") \(chat.title)").font(.system(.subheadline, design: .monospaced)) }
                 .swipeActions(allowsFullSwipe: false) {
                     Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
                     Button(archived ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !archived) }.tint(.orange).disabled(store.isSending)
@@ -108,7 +112,7 @@ struct ContentView: View {
         VStack(spacing: 14) {
             Text("🪄").font(.system(size: 54))
             Text("Чатов пока нет,\nно творить волшебство можно начать в любой момент").multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Button { store.newChat(); if let id = store.selectedChatID { path.append(id) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.buttonStyle(.borderedProminent).disabled(store.isSending)
+            Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.buttonStyle(.borderedProminent).disabled(store.isSending)
         }.frame(maxWidth: .infinity).padding(.vertical, 36)
     }
     private var settingsList: some View {

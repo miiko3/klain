@@ -16,6 +16,10 @@ import Security
     init() { load(); do { providers = try Vault.load(); drafts = try Vault.load(account: "drafts") } catch { self.error = "Keychain: \(error.localizedDescription)" }; if chats.isEmpty { newChat() } }
     func saveDraft(_ provider: Provider) { var list = drafts; if let i = list.firstIndex(where: { $0.id == provider.id }) { list[i] = provider } else { list.append(provider) }; do { try Vault.save(list, account: "drafts"); drafts = list } catch { self.error = error.localizedDescription } }
     func deleteDraft(_ id: UUID) throws { let list = drafts.filter { $0.id != id }; try Vault.save(list, account: "drafts"); drafts = list }
+    func deleteDrafts(matching provider: Provider) throws {
+        let list = drafts.filter { $0.id != provider.id && $0.slug != provider.slug && $0.baseURL != provider.baseURL }
+        try Vault.save(list, account: "drafts"); drafts = list
+    }
     func configure(_ p: Provider) throws {
         var updated = providers
         if let index = updated.firstIndex(where: { $0.id == p.id }) { updated[index] = p } else { updated.append(p) }
