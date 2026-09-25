@@ -140,6 +140,10 @@ struct ContentView: View {
                             Button { store.setReasoning(level) } label: { Label(level == "xhigh" ? "xHigh" : level.capitalized, systemImage: store.selectedChat?.reasoning == level ? "checkmark" : "brain") }
                         }
                     } label: { Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain").font(.caption).padding(10).background(Palette.panel).clipShape(Capsule()) }.disabled(store.isSending)
+                    Button {
+                        store.setWebSearch(store.selectedChat?.webSearch != true)
+                    } label: { Label("Сеть", systemImage: "globe").font(.caption).padding(10).background(store.selectedChat?.webSearch == true ? Palette.accent : Palette.panel).clipShape(Capsule()).foregroundStyle(store.selectedChat?.webSearch == true ? .black : Palette.accent) }
+                        .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
                 }.padding(.horizontal).padding(.vertical, 10)
                 Divider()
                 ScrollViewReader { proxy in

@@ -34,6 +34,7 @@ import Security
     func stop() { generation?.cancel() }
     func setModel(_ model: String) { if let i = chats.firstIndex(where: { $0.id == selectedChatID }) { chats[i].model = model; save() } }
     func setReasoning(_ value: String) { if let i = chats.firstIndex(where: { $0.id == selectedChatID }) { chats[i].reasoning = value; save() } }
+    func setWebSearch(_ enabled: Bool) { if let i = chats.firstIndex(where: { $0.id == selectedChatID }) { chats[i].webSearch = enabled; save() } }
     var selectedChat: Chat? { chats.first { $0.id == selectedChatID } }
     var activeChats: [Chat] { chats.filter { $0.archived != true } }
     var archivedChats: [Chat] { chats.filter { $0.archived == true } }

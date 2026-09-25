@@ -25,6 +25,7 @@ struct Chat: Identifiable, Codable, Equatable {
     var id = UUID(); var title = "Новый чат"; var model = "gpt-4o-mini"; var messages: [Message] = []
     var providerID: UUID?
     var reasoning: String?
+    var webSearch: Bool?
     var archived: Bool?
     var emoji: String?
 }

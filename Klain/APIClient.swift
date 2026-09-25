@@ -72,6 +72,10 @@ struct APIClient {
                             body["reasoning"] = ["effort": effort == "max" ? "xhigh" : effort]
                         } else { body["reasoning_effort"] = effort == "max" ? "xhigh" : effort }
                     }
+                    if chat.webSearch == true {
+                        if anthropic { body["tools"] = [["type": "web_search_20250305", "name": "web_search"]] }
+                        else { body["tools"] = [["type": "web_search"]] }
+                    }
                     r.httpBody = try JSONSerialization.data(withJSONObject: body)
                     let (bytes, response) = try await URLSession.shared.bytes(for: r); try validate(response)
                     if let http = response as? HTTPURLResponse {
