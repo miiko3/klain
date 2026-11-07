@@ -47,8 +47,16 @@ struct ContentView: View {
         .photosPicker(isPresented: $gallery, selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos]))
         .onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
         .sheet(isPresented: $camera) { CameraCapture { data in
-            guard data.count <= 20_000_000, attachments.reduce(0, { $0 + $1.data.count }) + data.count <= 30_000_000 else { error = "Лимит вложений: 30 МБ"; return }
-            attachments.append(Attachment(name: "Фото.jpg", mime: "image/jpeg", data: data))
+            guard let attachment = ImageTools.attachment(name: "Фото.jpg", data: data) else {
+                error = "Не удалось обработать фото"
+                return
+            }
+            guard attachment.data.count <= 20_000_000,
+                  attachments.reduce(0, { $0 + $1.data.count }) + attachment.data.count <= 30_000_000 else {
+                error = "Лимит вложений: 30 МБ"
+                return
+            }
+            attachments.append(attachment)
         } }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
         .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
@@ -248,6 +256,12 @@ struct ContentView: View {
                 ScrollView(.horizontal) { HStack { ForEach(attachments) { a in Button { attachments.removeAll { $0.id == a.id } } label: { Label(a.name + " ×", systemImage: "paperclip").font(.caption) } } } }
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7).padding(.top, 4)
+            if let reason = store.imageSupportWarning(for: attachments) {
+                Label(reason, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption2)
+                    .foregroundStyle(store.imageSupportError(for: attachments) != nil ? Color.red : Color.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             HStack {
                 Menu {
                     Button("Файлы", systemImage: "folder") { importing = true }
@@ -257,8 +271,34 @@ struct ContentView: View {
                     }
                 } label: { Label("Прикрепить", systemImage: "paperclip") }
                 Spacer()
-                if store.isSending { Button("Стоп", systemImage: "stop.circle.fill") { store.stop() } }
-                else { Button { let text = input; let files = attachments; input = ""; attachments = []; store.start(text, attachments: files) } label: { Image(systemName: "arrow.up").fontWeight(.bold).padding(9).background(GlassPalette.accentGradient).foregroundStyle(.black).clipShape(Circle()) }.disabled(store.activeProvider == nil || store.selectedChat?.model.isEmpty != false || (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty)) }
+                if store.isSending {
+                    Button("Стоп", systemImage: "stop.circle.fill") { store.stop() }
+                } else {
+                    Button {
+                        if let reason = store.imageSupportError(for: attachments) {
+                            error = reason
+                            return
+                        }
+                        let text = input
+                        let files = attachments
+                        input = ""
+                        attachments = []
+                        store.start(text, attachments: files)
+                    } label: {
+                        Image(systemName: "arrow.up")
+                            .fontWeight(.bold)
+                            .padding(9)
+                            .background(GlassPalette.accentGradient)
+                            .foregroundStyle(.black)
+                            .clipShape(Circle())
+                    }
+                    .disabled(
+                        store.activeProvider == nil
+                            || store.selectedChat?.model.isEmpty != false
+                            || (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty)
+                            || store.imageSupportError(for: attachments) != nil
+                    )
+                }
             }
         }
         .padding(14)
@@ -274,8 +314,17 @@ struct ContentView: View {
                 let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
                 guard size <= 20_000_000, total + size <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
                 let data = try Data(contentsOf: url)
-                total += data.count
-                imported.append(Attachment(name: url.lastPathComponent, mime: UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream", data: data))
+                let type = UTType(filenameExtension: url.pathExtension)
+                if ImageTools.isImageType(type) {
+                    guard let attachment = ImageTools.attachment(name: url.deletingPathExtension().lastPathComponent + ".jpg", data: data) else {
+                        throw NSError(domain: "File", code: 2, userInfo: [NSLocalizedDescriptionKey: "Не удалось обработать изображение \(url.lastPathComponent)."])
+                    }
+                    total += attachment.data.count
+                    imported.append(attachment)
+                } else {
+                    total += data.count
+                    imported.append(Attachment(name: url.lastPathComponent, mime: type?.preferredMIMEType ?? "application/octet-stream", data: data))
+                }
             }
             attachments.append(contentsOf: imported)
         } catch { self.error = error.localizedDescription }
@@ -286,10 +335,23 @@ struct ContentView: View {
         for item in items {
             do {
                 guard let data = try await item.loadTransferable(type: Data.self) else { throw URLError(.cannotDecodeContentData) }
-                guard data.count <= 20_000_000, total + data.count <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
-                total += data.count
-                let type = item.supportedContentTypes.first?.preferredMIMEType ?? "application/octet-stream"
-                imported.append(Attachment(name: "Медиа \(attachments.count + imported.count + 1)", mime: type, data: data))
+                guard data.count <= 20_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
+                let contentType = item.supportedContentTypes.first
+                let attachment: Attachment
+                if contentType?.conforms(to: .image) == true {
+                    guard let image = ImageTools.attachment(name: "Фото \(attachments.count + imported.count + 1).jpg", data: data) else {
+                        throw NSError(domain: "File", code: 2, userInfo: [NSLocalizedDescriptionKey: "Не удалось обработать изображение."])
+                    }
+                    attachment = image
+                } else {
+                    let mime = contentType?.preferredMIMEType ?? "application/octet-stream"
+                    attachment = Attachment(name: "Медиа \(attachments.count + imported.count + 1)", mime: mime, data: data)
+                }
+                guard total + attachment.data.count <= 30_000_000 else {
+                    throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."])
+                }
+                total += attachment.data.count
+                imported.append(attachment)
             } catch { await MainActor.run { self.error = error.localizedDescription } }
         }
         await MainActor.run {

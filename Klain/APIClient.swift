@@ -56,7 +56,21 @@ struct APIClient {
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw failure("Не удалось разобрать список моделей. Добавь ID вручную.") }
             let items = (json["data"] as? [[String: Any]]) ?? (json["models"] as? [[String: Any]]) ?? []
             guard !items.isEmpty else { throw failure("Провайдер не вернул список моделей. Добавь ID вручную.") }
-            result += items.compactMap { item in guard let id = item["id"] as? String else { return nil }; return ModelEntry(id: id, name: item["display_name"] as? String ?? item["name"] as? String ?? id, outputModalities: (item["architecture"] as? [String: Any])?["output_modalities"] as? [String]) }
+            result += items.compactMap { item in
+                guard let id = item["id"] as? String else { return nil }
+                let architecture = item["architecture"] as? [String: Any]
+                let output = architecture?["output_modalities"] as? [String]
+                var input = architecture?["input_modalities"] as? [String]
+                if input == nil, let modality = architecture?["modality"] as? String, let left = modality.split(separator: "->").first {
+                    input = left.split(separator: "+").map(String.init)
+                }
+                return ModelEntry(
+                    id: id,
+                    name: item["display_name"] as? String ?? item["name"] as? String ?? id,
+                    outputModalities: output,
+                    inputModalities: input
+                )
+            }
             guard provider.kind == "anthropic", json["has_more"] as? Bool == true, let last = json["last_id"] as? String, let encoded = last.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { break }
             path = "/models?after_id=\(encoded)"
         }
@@ -112,13 +126,20 @@ struct APIClient {
             let task = Task {
                 do {
                     let anthropic = provider.kind == "anthropic"
-                    let outgoing = try chat.messages.filter { message in
-                        guard message.failed != true else { return false }
-                        if message.role == "assistant", message.text.hasPrefix("Ошибка:") || message.text.hasPrefix("\nОшибка:") {
+                    let supportsImages = provider.models?.first(where: { $0.id == chat.model })?.inputModalities?.contains("image") ?? true
+                    let outgoing = try chat.messages.filter { item in
+                        guard item.failed != true else { return false }
+                        if item.role == "assistant", item.text.hasPrefix("Ошибка:") || item.text.hasPrefix("\nОшибка:") {
                             return false
                         }
-                        return !message.text.isEmpty || !message.attachments.isEmpty
-                    }.map { try message($0, provider: provider) }
+                        return !item.text.isEmpty || !item.attachments.isEmpty
+                    }.map { original in
+                        var item = original
+                        if !supportsImages {
+                            item.attachments = item.attachments.filter { !$0.mime.hasPrefix("image/") }
+                        }
+                        return try self.message(item, provider: provider)
+                    }
                     let baseBody: [String: Any] = ["model": chat.model, "stream": true, "messages": outgoing]
 
                     func makeRequest(includeUsage: Bool) throws -> URLRequest {
@@ -220,7 +241,16 @@ struct APIClient {
     private func message(_ m: Message, provider: Provider) throws -> [String: Any] {
         let anthropic = provider.kind == "anthropic"
         var parts: [[String: Any]] = m.text.isEmpty ? [] : [["type": "text", "text": m.text]]
-        for a in m.attachments {
+        for original in m.attachments {
+            let a: Attachment
+            if original.mime.hasPrefix("image/"),
+               original.mime != "image/jpeg",
+               original.mime != "image/png",
+               let normalized = ImageTools.attachment(name: original.name, data: original.data) {
+                a = normalized
+            } else {
+                a = original
+            }
             let base64 = a.data.base64EncodedString()
             let encoded = "data:\(a.mime);base64,\(base64)"
             if anthropic && (a.mime.hasPrefix("image/") || a.mime == "application/pdf") {

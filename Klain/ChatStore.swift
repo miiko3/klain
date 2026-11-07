@@ -50,6 +50,25 @@ import Security
     func removeProvider(_ id: UUID) throws { let updated = providers.filter { $0.id != id }; try Vault.save(updated); providers = updated }
     func select(_ p: Provider, model: String) { guard !isSending, let i = chats.firstIndex(where: { $0.id == selectedChatID }) else { return }; chats[i].providerID = p.id; chats[i].model = model; defaultModel = model; save() }
     var activeProvider: Provider? { if let id = selectedChat?.providerID { return providers.first { $0.id == id } }; return providers.first }
+    var selectedModelEntry: ModelEntry? {
+        guard let chat = selectedChat, let provider = activeProvider else { return nil }
+        return provider.models?.first { $0.id == chat.model }
+    }
+    func imageSupportError(for attachments: [Attachment]) -> String? {
+        guard attachments.contains(where: { $0.mime.hasPrefix("image/") }) else { return nil }
+        guard let entry = selectedModelEntry, let inputs = entry.inputModalities else { return nil }
+        guard !inputs.contains("image") else { return nil }
+        let name = entry.name.isEmpty ? entry.id : entry.name
+        return "Модель \(name) не поддерживает изображения. Выбери vision-модель или убери фото."
+    }
+    func imageSupportWarning(for attachments: [Attachment]) -> String? {
+        guard attachments.contains(where: { $0.mime.hasPrefix("image/") }) else { return nil }
+        guard let entry = selectedModelEntry else { return nil }
+        if let inputs = entry.inputModalities {
+            return inputs.contains("image") ? nil : imageSupportError(for: attachments)
+        }
+        return "Поддержка изображений для модели не подтверждена. Обнови список моделей в «Провайдерах»."
+    }
     func deleteChat(_ id: UUID) { guard !isSending else { return }; chats.removeAll { $0.id == id }; records.removeAll { $0.chatID == id }; if selectedChatID == id { selectedChatID = chats.first(where: { $0.archived != true })?.id }; save() }
     func archiveChat(_ id: UUID, archived: Bool) {
         guard !isSending, let i = chats.firstIndex(where: { $0.id == id }) else { return }
@@ -57,7 +76,12 @@ import Security
         if archived, selectedChatID == id { selectedChatID = chats.first(where: { $0.archived != true })?.id }
         save()
     }
-    func start(_ text: String, attachments: [Attachment]) { guard !isSending else { return }; isSending = true; generation = Task { await send(text, attachments: attachments) } }
+    func start(_ text: String, attachments: [Attachment]) {
+        guard !isSending else { return }
+        if let reason = imageSupportError(for: attachments) { error = reason; return }
+        isSending = true
+        generation = Task { await send(text, attachments: attachments) }
+    }
     func stop() { generation?.cancel() }
     func generateImage(prompt: String, model: String, size: String, provider: Provider) {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -145,9 +169,33 @@ import Security
             }
         } catch {
             chats[index].messages[messageIndex].failed = true
-            chats[index].messages[messageIndex].text += Task.isCancelled ? "\n[Остановлено]" : "\nОшибка: \(error.localizedDescription)"
+            chats[index].messages[messageIndex].text += Task.isCancelled ? "\n[Остановлено]" : "\nОшибка: \(friendlyError(error))"
         }
         if let usage = reported { records.append(UsageRecord(chatID: requestChat.id, chatTitle: requestChat.title, providerID: provider.id, providerName: provider.name, model: requestChat.model, usage: usage)) }
+    }
+    private func friendlyError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .networkConnectionLost:
+                return "Соединение с провайдером оборвалось. Возможно, модель не поддерживает изображение или файл слишком большой. Попробуй JPG/PNG меньшего размера."
+            case .timedOut:
+                return "Провайдер не ответил вовремя. Попробуй ещё раз."
+            case .notConnectedToInternet:
+                return "Нет подключения к интернету."
+            case .cancelled:
+                return "Запрос отменён."
+            default:
+                break
+            }
+        }
+        let text = error.localizedDescription
+        if text.localizedCaseInsensitiveContains("network connection was lost") {
+            return "Соединение с провайдером оборвалось. Возможно, модель не поддерживает изображение или файл слишком большой. Попробуй JPG/PNG меньшего размера."
+        }
+        if text.localizedCaseInsensitiveContains("could not read an image") {
+            return "Провайдер не смог прочитать изображение. Модель может не поддерживать картинки либо формат не JPG/PNG."
+        }
+        return text
     }
     private var file: URL { FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("chats.json") }
     private var usageFile: URL { file.deletingLastPathComponent().appendingPathComponent("usage.json") }

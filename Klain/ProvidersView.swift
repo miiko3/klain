@@ -73,7 +73,7 @@ struct ProviderEditor: View {
                 Section("МОДЕЛИ") {
                     Button("Загрузить модели из API", systemImage: "arrow.clockwise") {
                         loading = true
-                        Task { do { var p = provider; p.headers = headers; let loaded = try await APIClient().models(provider: p); for model in loaded { if let i = models.firstIndex(where: { $0.id == model.id }) { models[i].outputModalities = model.outputModalities } else { models.append(model) } }; error = "" } catch { self.error = error.localizedDescription }; loading = false }
+                        Task { do { var p = provider; p.headers = headers; let loaded = try await APIClient().models(provider: p); for model in loaded { if let i = models.firstIndex(where: { $0.id == model.id }) { models[i].outputModalities = model.outputModalities; models[i].inputModalities = model.inputModalities; if !model.name.isEmpty { models[i].name = model.name } } else { models.append(model) } }; error = "" } catch { self.error = error.localizedDescription }; loading = false }
                     }.disabled(loading)
                     if loading { ProgressView() }
                     TextField("Фильтр моделей", text: $query)

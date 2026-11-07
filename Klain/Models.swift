@@ -10,6 +10,7 @@ struct Provider: Identifiable, Codable, Equatable {
 struct ModelEntry: Identifiable, Codable, Equatable {
     var id: String; var name: String
     var outputModalities: [String]?
+    var inputModalities: [String]?
 }
 struct HeaderEntry: Identifiable, Codable, Equatable {
     var id = UUID(); var name = ""; var value = ""
