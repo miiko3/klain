@@ -118,20 +118,23 @@ extension View {
         #endif
     }
 
+    @ViewBuilder
     func glassCapsule(tint: Color = .clear) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             self.glassEffect(.regular.tint(tint.opacity(0.20)), in: Capsule())
         } else {
-            self
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.30), lineWidth: 1))
+            glassCapsuleFallback()
         }
         #else
+        glassCapsuleFallback()
+        #endif
+    }
+
+    func glassCapsuleFallback() -> some View {
         self
             .background(.ultraThinMaterial, in: Capsule())
             .overlay(Capsule().strokeBorder(Color.white.opacity(0.30), lineWidth: 1))
-        #endif
     }
 }
 
