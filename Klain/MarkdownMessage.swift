@@ -24,7 +24,10 @@ struct MarkdownMessage: View {
                     VStack(alignment: .leading) {
                         Button("Копировать код", systemImage: "doc.on.doc") { UIPasteboard.general.string = block.text }.font(.caption)
                         ScrollView(.horizontal) { Text(verbatim: block.text).font(.system(.callout, design: .monospaced)).textSelection(.enabled) }
-                    }.padding(12).background(Color.black.opacity(0.3)).clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .padding(12)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 1))
                 } else {
                     Text(.init(block.text)).font(block.level > 0 ? .system(size: CGFloat(max(17, 29 - block.level * 2)), weight: .bold) : .body).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                 }

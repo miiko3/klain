@@ -45,3 +45,43 @@ struct GeneratedMedia: Codable, Equatable, Identifiable {
 struct Attachment: Identifiable, Codable, Equatable {
     var id = UUID(); var name: String; var mime: String; var data: Data
 }
+struct GeneratedImage: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var prompt: String
+    var model: String
+    var size: String
+    var data: Data
+    var createdAt = Date()
+}
+
+enum ImageModelCatalog {
+    static let presets = [
+        "gpt-image-2.5-sunburst",
+        "gpt-image-2.5-flare",
+        "gpt-image-2",
+        "nano-banana-2",
+        "grok-imagine-image"
+    ]
+    static let sizes = ["1024x1024", "1024x1536", "1536x1024", "512x512"]
+
+    private static let hints = [
+        "image", "imagine", "banana", "dall-e", "flux", "stable-diffusion",
+        "sdxl", "ideogram", "midjourney", "imagen"
+    ]
+
+    static func looksLikeImageModel(_ id: String) -> Bool {
+        let lowered = id.lowercased()
+        return hints.contains { lowered.contains($0) }
+    }
+
+    static func models(from entries: [ModelEntry]) -> [ModelEntry] {
+        var result = entries.filter {
+            $0.outputModalities?.contains("image") == true || looksLikeImageModel($0.id)
+        }
+        let existing = Set(result.map(\.id))
+        for id in presets where !existing.contains(id) {
+            result.append(ModelEntry(id: id, name: id, outputModalities: ["image"]))
+        }
+        return result
+    }
+}

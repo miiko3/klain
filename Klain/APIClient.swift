@@ -8,7 +8,12 @@ enum APIEvent {
 
 struct APIClient {
     private func request(_ p: Provider, path: String) throws -> URLRequest {
-        guard let url = URL(string: p.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/ ")) + path), url.scheme == "https", url.host != nil else { throw failure("Нужен корректный HTTPS URL") }
+        var base = p.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        while base.hasSuffix("/") { base.removeLast() }
+        guard !base.isEmpty,
+              let url = URL(string: base + path),
+              url.scheme == "https",
+              url.host != nil else { throw failure("Нужен корректный HTTPS URL") }
         var r = URLRequest(url: url)
         r.timeoutInterval = 120
         if !p.apiKey.isEmpty {
@@ -19,15 +24,38 @@ struct APIClient {
         return r
     }
     private func failure(_ text: String) -> NSError { NSError(domain: "klain.API", code: 1, userInfo: [NSLocalizedDescriptionKey: text]) }
-    private func validate(_ response: URLResponse) throws {
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { throw failure("HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0). Проверь ключ, лимиты, модель и поддержку вложений.") }
+    private func validate(_ response: URLResponse, data: Data = Data()) throws {
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw httpError(response: response, data: data)
+        }
+    }
+    private func httpError(response: URLResponse, data: Data) -> NSError {
+        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
+                return failure("HTTP \(code): \(redact(message))")
+            }
+            if let message = json["message"] as? String {
+                return failure("HTTP \(code): \(redact(message))")
+            }
+        }
+        let text = (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let suffix = text.isEmpty ? "" : ": \(redact(String(text.prefix(300))))"
+        return failure("API вернул HTTP \(code)\(suffix)")
+    }
+    private func redact(_ text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: #"sk-[A-Za-z0-9_\-]{4,}"#) else { return text }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.stringByReplacingMatches(in: text, range: range, withTemplate: "sk-***")
     }
     func models(provider: Provider) async throws -> [ModelEntry] {
         var result: [ModelEntry] = []
         var path = "/models"
         for _ in 0..<100 {
-            let (data, response) = try await URLSession.shared.data(for: request(provider, path: path)); try validate(response)
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], let items = json["data"] as? [[String: Any]] else { throw failure("Провайдер не вернул список моделей. Добавь ID вручную.") }
+            let (data, response) = try await URLSession.shared.data(for: request(provider, path: path)); try validate(response, data: data)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw failure("Не удалось разобрать список моделей. Добавь ID вручную.") }
+            let items = (json["data"] as? [[String: Any]]) ?? (json["models"] as? [[String: Any]]) ?? []
+            guard !items.isEmpty else { throw failure("Провайдер не вернул список моделей. Добавь ID вручную.") }
             result += items.compactMap { item in guard let id = item["id"] as? String else { return nil }; return ModelEntry(id: id, name: item["display_name"] as? String ?? item["name"] as? String ?? id, outputModalities: (item["architecture"] as? [String: Any])?["output_modalities"] as? [String]) }
             guard provider.kind == "anthropic", json["has_more"] as? Bool == true, let last = json["last_id"] as? String, let encoded = last.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { break }
             path = "/models?after_id=\(encoded)"
@@ -38,51 +66,113 @@ struct APIClient {
     func balance(provider: Provider) async throws -> String {
         let host = URL(string: provider.baseURL)?.host
         if host == "openrouter.ai" {
-            let (data, response) = try await URLSession.shared.data(for: request(provider, path: "/key")); try validate(response)
+            let (data, response) = try await URLSession.shared.data(for: request(provider, path: "/key")); try validate(response, data: data)
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             if let info = json?["data"] as? [String: Any], let remaining = info["limit_remaining"] as? Double { return String(format: "Остаток лимита ключа: $%.4f", remaining) }
             return "Лимит ключа не задан; баланс счёта неизвестен"
         }
-        if host?.hasSuffix("cheapvibecode.ru") == true {
-            let (data, response) = try await URLSession.shared.data(for: request(provider, path: "/balance")); try validate(response)
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            let value = (json?["balance"] as? Double) ?? (json?["data"] as? [String: Any]).flatMap { $0["balance"] as? Double } ?? (json?["limit_remaining"] as? Double)
-            if let value { return String(format: "Доступно по ключу: $%.4f", value) }
-            if let text = json?["balance"] as? String, !text.isEmpty { return "Доступно по ключу: \(text)" }
-            return "Провайдер вернул ответ без распознанной суммы баланса"
-        }
         return "Баланс: нет данных API"
+    }
+    func generateImage(provider: Provider, model: String, prompt: String, size: String) async throws -> Data {
+        var urlRequest = try request(provider, path: "/images/generations")
+        urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = 180
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        let body: [String: Any] = ["model": model, "prompt": prompt, "n": 1, "size": size]
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        try validate(response, data: data)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw failure("Не удалось разобрать ответ API.")
+        }
+        if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
+            throw failure(redact(message))
+        }
+        guard let rows = json["data"] as? [[String: Any]], let first = rows.first else {
+            throw failure("Провайдер не вернул изображение.")
+        }
+        if let base64 = first["b64_json"] as? String, let decoded = Data(base64Encoded: base64) {
+            return decoded
+        }
+        if let value = first["url"] as? String {
+            if value.hasPrefix("data:"), let comma = value.firstIndex(of: ","), let decoded = Data(base64Encoded: String(value[value.index(after: comma)...])) {
+                return decoded
+            }
+            if let url = URL(string: value) {
+                let (imageData, imageResponse) = try await URLSession.shared.data(from: url)
+                try validate(imageResponse, data: imageData)
+                if !imageData.isEmpty { return imageData }
+            }
+        }
+        throw failure("Провайдер не вернул изображение.")
     }
     func stream(chat: Chat, provider: Provider) -> AsyncThrowingStream<APIEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     let anthropic = provider.kind == "anthropic"
-                    var r = try request(provider, path: anthropic ? "/messages" : "/chat/completions")
-                    r.httpMethod = "POST"; r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    var body: [String: Any] = ["model": chat.model, "stream": true, "messages": try chat.messages.filter { $0.failed != true }.map { try message($0, provider: provider) }]
-                    if anthropic { body["max_tokens"] = 8192 }
-                    else { body["stream_options"] = ["include_usage": true] }
-                    if URL(string: provider.baseURL)?.host == "openrouter.ai", let outputs = provider.models?.first(where: { $0.id == chat.model })?.outputModalities, outputs.contains("image") { body["modalities"] = outputs }
-                    if let effort = chat.reasoning, effort != "default" {
-                        if anthropic {
-                            body["thinking"] = ["type": "adaptive"]
-                            body["output_config"] = ["effort": effort == "xhigh" ? "max" : effort]
-                        } else if URL(string: provider.baseURL)?.host == "openrouter.ai" {
-                            body["reasoning"] = ["effort": effort == "max" ? "xhigh" : effort]
-                        } else { body["reasoning_effort"] = effort == "max" ? "xhigh" : effort }
+                    let outgoing = try chat.messages.filter { message in
+                        guard message.failed != true else { return false }
+                        if message.role == "assistant", message.text.hasPrefix("Ошибка:") || message.text.hasPrefix("\nОшибка:") {
+                            return false
+                        }
+                        return !message.text.isEmpty || !message.attachments.isEmpty
+                    }.map { try message($0, provider: provider) }
+                    let baseBody: [String: Any] = ["model": chat.model, "stream": true, "messages": outgoing]
+
+                    func makeRequest(includeUsage: Bool) throws -> URLRequest {
+                        var body = baseBody
+                        if anthropic { body["max_tokens"] = 8192 }
+                        else if includeUsage { body["stream_options"] = ["include_usage": true] }
+                        if URL(string: provider.baseURL)?.host == "openrouter.ai", let outputs = provider.models?.first(where: { $0.id == chat.model })?.outputModalities, outputs.contains("image") { body["modalities"] = outputs }
+                        if let effort = chat.reasoning, effort != "default" {
+                            if anthropic {
+                                body["thinking"] = ["type": "adaptive"]
+                                body["output_config"] = ["effort": effort == "xhigh" ? "max" : effort]
+                            } else if URL(string: provider.baseURL)?.host == "openrouter.ai" {
+                                body["reasoning"] = ["effort": effort == "max" ? "xhigh" : effort]
+                            } else { body["reasoning_effort"] = effort == "max" ? "xhigh" : effort }
+                        }
+                        if chat.webSearch == true {
+                            if anthropic { body["tools"] = [["type": "web_search_20250305", "name": "web_search"]] }
+                            else { body["tools"] = [["type": "web_search"]] }
+                        }
+                        var r = try request(provider, path: anthropic ? "/messages" : "/chat/completions")
+                        r.httpMethod = "POST"
+                        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                        r.httpBody = try JSONSerialization.data(withJSONObject: body)
+                        return r
                     }
-                    if chat.webSearch == true {
-                        if anthropic { body["tools"] = [["type": "web_search_20250305", "name": "web_search"]] }
-                        else { body["tools"] = [["type": "web_search"]] }
+
+                    func openStream(includeUsage: Bool) async throws -> (URLSession.AsyncBytes, HTTPURLResponse) {
+                        let (bytes, response) = try await URLSession.shared.bytes(for: makeRequest(includeUsage: includeUsage))
+                        guard let http = response as? HTTPURLResponse else { throw failure("Некорректный ответ API") }
+                        if !(200..<300).contains(http.statusCode) {
+                            var data = Data()
+                            for try await byte in bytes {
+                                data.append(byte)
+                                if data.count >= 64_000 { break }
+                            }
+                            throw httpError(response: http, data: data)
+                        }
+                        return (bytes, http)
                     }
-                    r.httpBody = try JSONSerialization.data(withJSONObject: body)
-                    let (bytes, response) = try await URLSession.shared.bytes(for: r); try validate(response)
-                    if let http = response as? HTTPURLResponse {
-                        let names = ["x-ratelimit-remaining-tokens", "anthropic-ratelimit-tokens-remaining", "anthropic-ratelimit-input-tokens-remaining", "anthropic-ratelimit-output-tokens-remaining"]
-                        let values = names.compactMap { name in http.value(forHTTPHeaderField: name).map { "\(name): \($0)" } }
-                        if !values.isEmpty { continuation.yield(.remaining(values.joined(separator: "\n") + "\nОстаток окна rate limit, не баланс аккаунта.")) }
+
+                    let opened: (URLSession.AsyncBytes, HTTPURLResponse)
+                    do {
+                        opened = try await openStream(includeUsage: !anthropic)
+                    } catch {
+                        if !anthropic, error.localizedDescription.lowercased().contains("stream_options") {
+                            opened = try await openStream(includeUsage: false)
+                        } else {
+                            throw error
+                        }
                     }
+                    let (bytes, http) = opened
+                    let names = ["x-ratelimit-remaining-tokens", "anthropic-ratelimit-tokens-remaining", "anthropic-ratelimit-input-tokens-remaining", "anthropic-ratelimit-output-tokens-remaining"]
+                    let values = names.compactMap { name in http.value(forHTTPHeaderField: name).map { "\(name): \($0)" } }
+                    if !values.isEmpty { continuation.yield(.remaining(values.joined(separator: "\n") + "\nОстаток окна rate limit, не баланс аккаунта.")) }
                     var usage = Usage()
                     for try await line in bytes.lines {
                         try Task.checkCancellation()
@@ -90,7 +180,7 @@ struct APIClient {
                         let payload = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
                         if payload == "[DONE]" { break }
                         guard let data = payload.data(using: .utf8), let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
-                        if let error = json["error"] as? [String: Any] { throw failure(error["message"] as? String ?? "Ошибка потока API") }
+                        if let error = json["error"] as? [String: Any] { throw failure(redact(error["message"] as? String ?? "Ошибка потока API")) }
                         if anthropic {
                             if let delta = json["delta"] as? [String: Any], let text = delta["thinking"] as? String { continuation.yield(.thinking(text)) }
                             if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String { continuation.yield(.text(text)) }

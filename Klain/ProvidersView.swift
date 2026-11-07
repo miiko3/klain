@@ -36,7 +36,7 @@ struct ProvidersView: View {
                     ForEach(ProviderPreset.all) { preset in Button { editing = Provider(name: preset.name, baseURL: preset.url, apiKey: "", kind: preset.id, slug: preset.id) } label: { Label(preset.name, systemImage: preset.symbol).padding(.vertical, 7) } }
                 }
                 Section { Text("Ключи и пользовательские заголовки хранятся в Keychain. Список моделей приходит от провайдера: доступ зависит от тарифа и прав ключа.").font(.caption).foregroundStyle(.secondary) }
-            }.scrollContentBackground(.hidden).background(Palette.background)
+            }.scrollContentBackground(.hidden).background { LiquidBackground() }
                 .navigationTitle("Провайдеры").toolbar { Button("Готово") { dismiss() } }
                 .sheet(item: $editing) { ProviderEditor(provider: $0) }
                 .alert("Ошибка", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
@@ -57,7 +57,7 @@ struct ProviderEditor: View {
     @State private var ready = false
     @State private var saved = false
     @State private var showMediaNotice = false
-    private let mediaNotice = "Добавление API-ключа не гарантирует генерацию изображений, видео и аудио. В klain и похожих чат-клиентах она доступна только при поддержке со стороны приложения, API-провайдера и выбранной модели. Для CheapVibeCode поддержка генерации медиа не подтверждена."
+    private let mediaNotice = "Добавление API-ключа не гарантирует генерацию изображений, видео и аудио. В klain раздел «Картинки» работает, если выбранный провайдер и модель поддерживают отдельный API генерации изображений."
     @Environment(\.scenePhase) private var scenePhase
     var body: some View {
         NavigationStack {
@@ -90,7 +90,7 @@ struct ProviderEditor: View {
                     Button("Добавить заголовок", systemImage: "plus") { headers.append(HeaderEntry()) }
                 }
                 if !error.isEmpty { Section { Text(error).foregroundStyle(.red) } }
-            }.textInputAutocapitalization(.never).autocorrectionDisabled().scrollContentBackground(.hidden).background(Palette.background)
+            }.textInputAutocapitalization(.never).autocorrectionDisabled().scrollContentBackground(.hidden).background { LiquidBackground() }
                 .navigationTitle(provider.name).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Назад") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Сохранить", action: save).disabled(loading || store.isSending) } }
                 .onAppear { if !ready { if let draft = store.drafts.first(where: { $0.id == provider.id }) { provider = draft }; models = provider.models ?? []; headers = provider.headers ?? []; slug = provider.slug ?? "custom"; ready = true } }
@@ -104,6 +104,13 @@ struct ProviderEditor: View {
         }.preferredColorScheme(.dark).tint(Palette.accent)
     }
     private func save() {
+        models = models.map {
+            ModelEntry(
+                id: $0.id.trimmingCharacters(in: .whitespacesAndNewlines),
+                name: $0.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                outputModalities: $0.outputModalities
+            )
+        }
         guard slug.range(of: "^[a-z0-9_-]+$", options: .regularExpression) != nil else { error = "ID: строчные латинские буквы, цифры, дефис и подчёркивание"; return }
         guard !store.providers.contains(where: { $0.id != provider.id && $0.slug == slug }) else { error = "Этот ID уже используется"; return }
         guard let url = URL(string: provider.baseURL), url.scheme == "https", url.host != nil, !provider.name.isEmpty else { error = "Укажи имя и корректный HTTPS URL"; return }

@@ -9,7 +9,7 @@ enum Palette {
 }
 
 enum Route: Hashable {
-    case chats, settings, chat(UUID)
+    case chats, images, settings, chat(UUID)
 }
 
 struct ContentView: View {
@@ -31,6 +31,7 @@ struct ContentView: View {
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .chats: chatsList
+                    case .images: ImageStudioView()
                     case .settings: settingsList
                     case .chat(let id): chatDetail.onAppear { store.selectedChatID = id }
                     }
@@ -53,21 +54,31 @@ struct ContentView: View {
         .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
     }
     private var home: some View {
-        List {
-            Section { HomeBanner() }
-            Section { SigningReminder() }
-        }.scrollContentBackground(.hidden).background(Palette.background)
-            .navigationTitle("klain")
-            .safeAreaInset(edge: .bottom) { homeMenu }
+        ZStack {
+            LiquidBackground()
+            List {
+                Section {
+                    HomeBanner().listRowBackground(Color.clear).listRowSeparator(.hidden)
+                }
+                Section {
+                    SigningReminder().listRowBackground(Color.clear).listRowSeparator(.hidden)
+                }
+            }
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle("klain")
+        .safeAreaInset(edge: .bottom) { homeMenu }
     }
     private var homeMenu: some View {
-        HStack(spacing: 10) {
-            menuButton("Чаты", icon: "bubble.left.and.bubble.right", action: { path.append(.chats) })
+        HStack(spacing: 8) {
+            menuButton("Чаты", icon: "bubble.left.and.bubble.right.fill", action: { path.append(.chats) })
+            menuButton("Картинки", icon: "sparkles", action: { path.append(.images) })
             menuButton("Настройки", icon: "slider.horizontal.3", action: { path.append(.settings) })
-        }.padding(.horizontal, 18).padding(.vertical, 12)
-            .background(Palette.panel.clipShape(RoundedRectangle(cornerRadius: 22)))
-            .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.12)))
-            .padding(.horizontal).padding(.bottom, 30)
+        }
+        .padding(8)
+        .glassSurface(radius: 26)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 24)
     }
     private func menuButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -78,58 +89,89 @@ struct ContentView: View {
         }.buttonStyle(.borderless).foregroundStyle(Palette.accent)
     }
     private var chatsList: some View {
-        List {
-            if store.activeChats.isEmpty && store.archivedChats.isEmpty {
-                Section { emptyChats }
-            } else {
-                if !store.activeChats.isEmpty {
-                    Section("ДИАЛОГИ") { chatRows(store.activeChats, archived: false) }
-                }
-                if !store.archivedChats.isEmpty {
-                    Section("АРХИВЫ") { chatRows(store.archivedChats, archived: true) }
-                }
-            }
-        }.scrollContentBackground(.hidden).background(Palette.background)
-            .navigationTitle("Чаты").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if !store.activeChats.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
+        ZStack {
+            LiquidBackground()
+            List {
+                if store.activeChats.isEmpty && store.archivedChats.isEmpty {
+                    Section { emptyChats.listRowBackground(Color.clear).listRowSeparator(.hidden) }
+                } else {
+                    if !store.activeChats.isEmpty {
+                        Section("ДИАЛОГИ") { chatRows(store.activeChats, archived: false) }
+                    }
+                    if !store.archivedChats.isEmpty {
+                        Section("АРХИВЫ") { chatRows(store.archivedChats, archived: true) }
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle("Чаты").navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !store.activeChats.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
+                }
+            }
+        }
     }
     private func chatRows(_ chats: [Chat], archived: Bool) -> some View {
         ForEach(chats) { chat in
-            NavigationLink(value: Route.chat(chat.id)) { Text("\(chat.emoji ?? "💬") \(chat.title)").font(.system(.subheadline, design: .monospaced)) }
-                .swipeActions(allowsFullSwipe: false) {
-                    Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
-                    Button(archived ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !archived) }.tint(.orange).disabled(store.isSending)
+            NavigationLink(value: Route.chat(chat.id)) {
+                HStack(spacing: 12) {
+                    Text(chat.emoji ?? "💬").font(.system(size: 24))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(chat.title).font(.system(.subheadline, design: .rounded).weight(.semibold)).lineLimit(1)
+                        Text(chat.model).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
                 }
+                .padding(14)
+                .glassSurface(radius: 18)
+            }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .swipeActions(allowsFullSwipe: false) {
+                Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
+                Button(archived ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !archived) }.tint(.orange).disabled(store.isSending)
+            }
         }
     }
     private var emptyChats: some View {
         VStack(spacing: 14) {
             Text("🪄").font(.system(size: 54))
             Text("Чатов пока нет,\nно творить волшебство можно начать в любой момент").multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.buttonStyle(.borderedProminent).disabled(store.isSending)
-        }.frame(maxWidth: .infinity).padding(.vertical, 36)
+            Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }
+                .buttonStyle(GlassButtonStyle(prominent: true))
+                .disabled(store.isSending)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 30)
+        .padding(.horizontal, 18)
+        .glassSurface(radius: 22)
     }
     private var settingsList: some View {
-        List {
-            Section("НАСТРОЙКИ") {
-                Button { settings = true } label: { Label("Провайдеры", systemImage: "slider.horizontal.3") }
-                Button { stats = true } label: { Label("Статистика", systemImage: "chart.bar") }
+        ZStack {
+            LiquidBackground()
+            List {
+                Section("НАСТРОЙКИ") {
+                    Button { settings = true } label: { Label("Провайдеры", systemImage: "slider.horizontal.3") }
+                    Button { stats = true } label: { Label("Статистика", systemImage: "chart.bar") }
+                    Button { path.append(.images) } label: { Label("Картинки", systemImage: "sparkles") }
+                }
+                Section("АВТОР") {
+                    Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
+                    Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
+                    Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
+                    Link(destination: URL(string: "https://boosty.to/miilo3")!) { Label("Boosty · поддержать", systemImage: "heart") }
+                }
+                Section { Text("klain — песочница для запросов к ИИ по твоим API-ключам. Генерация изображений доступна, если её поддерживает провайдер и выбранная модель.").font(.caption).foregroundStyle(.secondary) }
             }
-            Section("АВТОР") {
-                Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
-                Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
-                Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
-                Link(destination: URL(string: "https://boosty.to/miilo3")!) { Label("Boosty · поддержать", systemImage: "heart") }
-            }
-            Section { Text("klain — песочница для запросов к ИИ по твоим API-ключам. Генерация фото, видео и аудио недоступна.").font(.caption).foregroundStyle(.secondary) }
-        }.scrollContentBackground(.hidden).background(Palette.background)
-            .navigationTitle("Настройки").navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle("Настройки").navigationBarTitleDisplayMode(.inline)
     }
     private var chatDetail: some View {
             VStack(spacing: 0) {
@@ -139,10 +181,23 @@ struct ContentView: View {
                         ForEach(["default", "low", "medium", "high", "xhigh", "max"], id: \.self) { level in
                             Button { store.setReasoning(level) } label: { Label(level == "xhigh" ? "xHigh" : level.capitalized, systemImage: store.selectedChat?.reasoning == level ? "checkmark" : "brain") }
                         }
-                    } label: { Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain").font(.caption).padding(10).background(Palette.panel).clipShape(Capsule()) }.disabled(store.isSending)
+                    } label: {
+                        Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
+                            .font(.caption)
+                            .padding(10)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+                    }.disabled(store.isSending)
                     Button {
                         store.setWebSearch(store.selectedChat?.webSearch != true)
-                    } label: { Label("Сеть", systemImage: "globe").font(.caption).padding(10).background(store.selectedChat?.webSearch == true ? Palette.accent : Palette.panel).clipShape(Capsule()).foregroundStyle(store.selectedChat?.webSearch == true ? .black : Palette.accent) }
+                    } label: {
+                        Label("Сеть", systemImage: "globe")
+                            .font(.caption)
+                            .padding(10)
+                            .background(store.selectedChat?.webSearch == true ? Palette.accent : Palette.panel.opacity(0.4), in: Capsule())
+                            .foregroundStyle(store.selectedChat?.webSearch == true ? .black : Palette.accent)
+                            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+                    }
                         .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
                 }.padding(.horizontal).padding(.vertical, 10)
                 Divider()
@@ -157,7 +212,7 @@ struct ContentView: View {
                         .onChange(of: store.selectedChatID) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
                 }
                 composer
-            }.background(Palette.background).navigationTitle(store.selectedChat?.title ?? "Новый чат").navigationBarTitleDisplayMode(.inline)
+            }.background { LiquidBackground() }.navigationTitle(store.selectedChat?.title ?? "Новый чат").navigationBarTitleDisplayMode(.inline)
                 .background(BackTitleConfigurator())
                 .toolbar { ToolbarItemGroup(placement: .topBarTrailing) { Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } } }
     }
@@ -166,8 +221,12 @@ struct ContentView: View {
             Text(store.selectedChat?.emoji ?? "✨").font(.system(size: 56))
             Text("Давай начнём.").font(.system(size: 32, weight: .medium, design: .serif))
             Text("Твои модели. Твои идеи.\nОдин спокойный уголок для диалогов.").foregroundStyle(.secondary)
-            if store.providers.isEmpty { Button("Подключить провайдера", systemImage: "plus") { settings = true }.buttonStyle(.bordered) }
-        }.multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 300, alignment: .center).padding(.vertical, 24)
+            if store.providers.isEmpty { Button("Подключить провайдера", systemImage: "plus") { settings = true }.buttonStyle(GlassButtonStyle()) }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, minHeight: 260, alignment: .center)
+        .padding(24)
+        .glassSurface(radius: 24)
     }
     private var modelMenu: some View {
         Menu {
@@ -176,7 +235,11 @@ struct ContentView: View {
             }
             Button("Настроить модели…") { settings = true }
         } label: {
-            HStack { Text(store.selectedChat?.model ?? "Выбрать модель").lineLimit(1); Spacer(); Image(systemName: "chevron.down") }.font(.system(.caption, design: .monospaced)).padding(10).background(Palette.panel).clipShape(Capsule())
+            HStack { Text(store.selectedChat?.model ?? "Выбрать модель").lineLimit(1); Spacer(); Image(systemName: "chevron.down") }
+                .font(.system(.caption, design: .monospaced))
+                .padding(10)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
         }.disabled(store.isSending)
     }
     private var composer: some View {
@@ -195,30 +258,44 @@ struct ContentView: View {
                 } label: { Label("Прикрепить", systemImage: "paperclip") }
                 Spacer()
                 if store.isSending { Button("Стоп", systemImage: "stop.circle.fill") { store.stop() } }
-                else { Button { let text = input; let files = attachments; input = ""; attachments = []; store.start(text, attachments: files) } label: { Image(systemName: "arrow.up").fontWeight(.bold).padding(9).background(Palette.accent).foregroundStyle(.black).clipShape(RoundedRectangle(cornerRadius: 8)) }.disabled(store.activeProvider == nil || store.selectedChat?.model.isEmpty != false || (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty)) }
+                else { Button { let text = input; let files = attachments; input = ""; attachments = []; store.start(text, attachments: files) } label: { Image(systemName: "arrow.up").fontWeight(.bold).padding(9).background(GlassPalette.accentGradient).foregroundStyle(.black).clipShape(Circle()) }.disabled(store.activeProvider == nil || store.selectedChat?.model.isEmpty != false || (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty)) }
             }
-        }.padding(14).background(Palette.panel).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.12))).padding(12)
+        }
+        .padding(14)
+        .glassSurface(radius: 24)
+        .padding(12)
     }
     private func importFiles(_ result: Result<[URL], Error>) {
         do {
+            var imported: [Attachment] = []
+            var total = attachments.reduce(0) { $0 + $1.data.count }
             for url in try result.get() {
                 let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
                 let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                guard size <= 20_000_000, attachments.reduce(0, { $0 + $1.data.count }) + size <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
-                attachments.append(Attachment(name: url.lastPathComponent, mime: UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream", data: try Data(contentsOf: url)))
+                guard size <= 20_000_000, total + size <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
+                let data = try Data(contentsOf: url)
+                total += data.count
+                imported.append(Attachment(name: url.lastPathComponent, mime: UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream", data: data))
             }
+            attachments.append(contentsOf: imported)
         } catch { self.error = error.localizedDescription }
     }
     private func importPhotos(_ items: [PhotosPickerItem]) async {
+        var imported: [Attachment] = []
+        var total = attachments.reduce(0) { $0 + $1.data.count }
         for item in items {
             do {
                 guard let data = try await item.loadTransferable(type: Data.self) else { throw URLError(.cannotDecodeContentData) }
-                guard data.count <= 20_000_000, attachments.reduce(0, { $0 + $1.data.count }) + data.count <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
+                guard data.count <= 20_000_000, total + data.count <= 30_000_000 else { throw NSError(domain: "File", code: 1, userInfo: [NSLocalizedDescriptionKey: "Лимит: 20 МБ на файл, 30 МБ на сообщение."]) }
+                total += data.count
                 let type = item.supportedContentTypes.first?.preferredMIMEType ?? "application/octet-stream"
-                await MainActor.run { attachments.append(Attachment(name: "Медиа \(attachments.count + 1)", mime: type, data: data)) }
+                imported.append(Attachment(name: "Медиа \(attachments.count + imported.count + 1)", mime: type, data: data))
             } catch { await MainActor.run { self.error = error.localizedDescription } }
         }
-        await MainActor.run { photoItems = [] }
+        await MainActor.run {
+            attachments.append(contentsOf: imported)
+            photoItems = []
+        }
     }
 }
 
@@ -234,13 +311,24 @@ struct MessageView: View {
                 DisclosureGroup {
                     Text(message.thinking ?? "Провайдер не передаёт текст рассуждений.").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
                 } label: {
-                    HStack { if waiting && message.text.isEmpty { ProgressView() }; Text(waiting && message.text.isEmpty ? "Думает…" : "Мышление") }
+                    HStack { if waiting && message.text.isEmpty { TypingDots() }; Text(waiting && message.text.isEmpty ? "Думает…" : "Мышление") }
                 }
             }
             ForEach(message.attachments) { a in Label(a.name, systemImage: "doc").font(.caption).foregroundStyle(.secondary) }
             MarkdownMessage(text: message.text)
             ForEach(message.media ?? []) { media in GeneratedMediaView(media: media) }
             if let u = message.usage { Text("↑ \(u.input.map(String.init) ?? "—")   ↓ \(u.output.map(String.init) ?? "—") токенов").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary) }
-        }.padding(16).background(message.role == "user" ? Palette.panel : Color.clear).clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .padding(16)
+        .background {
+            if message.role == "user" {
+                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.ultraThinMaterial)
+            }
+        }
+        .overlay {
+            if message.role == "user" {
+                RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Palette.accent.opacity(0.28), lineWidth: 1)
+            }
+        }
     }
 }
