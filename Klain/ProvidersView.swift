@@ -77,9 +77,20 @@ struct ProviderEditor: View {
                     }.disabled(loading)
                     if loading { ProgressView() }
                     TextField("Фильтр моделей", text: $query)
+                    if models.contains(where: { $0.supportsVision == true }) {
+                        Text("Бейдж «видит фото» отмечает модели, которым можно отправлять изображения.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                     ForEach(models.indices.filter { query.isEmpty || models[$0].id.localizedCaseInsensitiveContains(query) || models[$0].name.localizedCaseInsensitiveContains(query) }, id: \.self) { index in
                         HStack {
                             VStack { TextField("model-id", text: $models[index].id); TextField("Отображаемое имя", text: $models[index].name).font(.caption) }
+                            Spacer()
+                            if models[index].supportsVision == true {
+                                VisionBadge()
+                            } else if models[index].supportsVision == false {
+                                Text("текст").font(.caption2).foregroundStyle(.secondary)
+                            }
                             Button(role: .destructive) { models.remove(at: index) } label: { Image(systemName: "trash") }.buttonStyle(.borderless)
                         }
                     }

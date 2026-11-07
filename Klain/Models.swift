@@ -11,6 +11,11 @@ struct ModelEntry: Identifiable, Codable, Equatable {
     var id: String; var name: String
     var outputModalities: [String]?
     var inputModalities: [String]?
+
+    var supportsVision: Bool? {
+        guard let inputs = inputModalities, !inputs.isEmpty else { return nil }
+        return inputs.contains("image")
+    }
 }
 struct HeaderEntry: Identifiable, Codable, Equatable {
     var id = UUID(); var name = ""; var value = ""

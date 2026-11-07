@@ -1,6 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import PhotosUI
+import UIKit
 
 enum Palette {
     static let background = Color(red: 0.09, green: 0.09, blue: 0.085)
@@ -21,6 +22,7 @@ struct ContentView: View {
     @State private var attachments: [Attachment] = []
     @State private var error: String?
     @State private var photoItems: [PhotosPickerItem] = []
+    @SceneStorage("klain.nav") private var storedPath = ""
     @State private var path: [Route] = []
     @State private var deleting: UUID?
     @State private var gallery = false
@@ -44,7 +46,7 @@ struct ContentView: View {
         } message: { Text("Все локальные данные чата, вложения и его статистика будут стёрты. Восстановить их нельзя. Данные у API-провайдера это не удаляет.") }
         .sheet(isPresented: $settings) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
-        .photosPicker(isPresented: $gallery, selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos]))
+        .photosPicker(isPresented: $gallery, selection: $photoItems, maxSelectionCount: 10, matching: .any(of: [.images, .videos, .livePhotos]))
         .onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
         .sheet(isPresented: $camera) { CameraCapture { data in
             guard let attachment = ImageTools.attachment(name: "Фото.jpg", data: data) else {
@@ -60,6 +62,38 @@ struct ContentView: View {
         } }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .movie, .pdf, .text, .data], allowsMultipleSelection: true, onCompletion: importFiles)
         .alert("Ошибка", isPresented: Binding(get: { error != nil || store.error != nil }, set: { if !$0 { error = nil; store.error = nil } })) { Button("OK") { error = nil; store.error = nil } } message: { Text(error ?? store.error ?? "") }
+        .onAppear(perform: restorePath)
+        .onChange(of: path) { _, value in storedPath = encode(value) }
+    }
+    private func encode(_ routes: [Route]) -> String {
+        routes.map { route in
+            switch route {
+            case .chat(let id): return "chat:\(id.uuidString)"
+            case .chats: return "chats"
+            case .images: return "images"
+            case .settings: return "settings"
+            }
+        }.joined(separator: "|")
+    }
+    private func restorePath() {
+        guard path.isEmpty, !storedPath.isEmpty else { return }
+        let restored: [Route] = storedPath.split(separator: "|").compactMap { part in
+            if part.hasPrefix("chat:"), let id = UUID(uuidString: String(part.dropFirst(5))) {
+                guard store.chats.contains(where: { $0.id == id }) else { return nil }
+                return .chat(id)
+            }
+            switch part {
+            case "chats": return .chats
+            case "images": return .images
+            case "settings": return .settings
+            default: return nil
+            }
+        }
+        guard !restored.isEmpty else { return }
+        path = restored
+        if case .chat(let id) = restored.last {
+            store.selectedChatID = id
+        }
     }
     private var home: some View {
         ZStack {
@@ -182,8 +216,10 @@ struct ContentView: View {
         .navigationTitle("Настройки").navigationBarTitleDisplayMode(.inline)
     }
     private var chatDetail: some View {
+        ZStack {
+            LiquidBackground()
             VStack(spacing: 0) {
-                HStack {
+                HStack(spacing: 8) {
                     modelMenu
                     Menu {
                         ForEach(["default", "low", "medium", "high", "xhigh", "max"], id: \.self) { level in
@@ -193,8 +229,7 @@ struct ContentView: View {
                         Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
                             .font(.caption)
                             .padding(10)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+                            .glassCapsule()
                     }.disabled(store.isSending)
                     Button {
                         store.setWebSearch(store.selectedChat?.webSearch != true)
@@ -202,32 +237,55 @@ struct ContentView: View {
                         Label("Сеть", systemImage: "globe")
                             .font(.caption)
                             .padding(10)
-                            .background(store.selectedChat?.webSearch == true ? Palette.accent : Palette.panel.opacity(0.4), in: Capsule())
+                            .background(store.selectedChat?.webSearch == true ? Palette.accent : Color.clear, in: Capsule())
+                            .glassCapsule(tint: store.selectedChat?.webSearch == true ? Palette.accent : .clear)
                             .foregroundStyle(store.selectedChat?.webSearch == true ? .black : Palette.accent)
-                            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
                     }
                         .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
-                }.padding(.horizontal).padding(.vertical, 10)
-                Divider()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 24) {
+                        LazyVStack(alignment: .leading, spacing: 22) {
                             if store.selectedChat?.messages.isEmpty != false { welcome }
-                            ForEach(store.selectedChat?.messages ?? []) { message in MessageView(message: message, waiting: store.isSending && message.id == store.selectedChat?.messages.last?.id).id(message.id) }
+                            ForEach(store.selectedChat?.messages ?? []) { message in
+                                MessageView(message: message, waiting: store.isSending && message.id == store.selectedChat?.messages.last?.id)
+                                    .id(message.id)
+                            }
                             Color.clear.frame(height: 1).id("bottom")
-                        }.padding(20)
-                    }.scrollDismissesKeyboard(.interactively).onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
-                        .onChange(of: store.selectedChatID) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 14)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
+                    .onChange(of: store.selectedChatID) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
                 }
                 composer
-            }.background { LiquidBackground() }.navigationTitle(store.selectedChat?.title ?? "Новый чат").navigationBarTitleDisplayMode(.inline)
-                .background(BackTitleConfigurator())
-                .toolbar { ToolbarItemGroup(placement: .topBarTrailing) { Button("Статистика", systemImage: "chart.bar") { stats = true }; Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true } } }
+            }
+        }
+        .navigationTitle(store.selectedChat?.title ?? "Новый чат")
+        .navigationBarTitleDisplayMode(.inline)
+        .background(BackTitleConfigurator())
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Статистика", systemImage: "chart.bar") { stats = true }
+                Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }
+            }
+        }
     }
     private var welcome: some View {
-        VStack(alignment: .center, spacing: 18) {
-            Text(store.selectedChat?.emoji ?? "✨").font(.system(size: 56))
-            Text("Давай начнём.").font(.system(size: 32, weight: .medium, design: .serif))
+        VStack(alignment: .center, spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(GlassPalette.accentGradient)
+                    .frame(width: 76, height: 76)
+                    .shadow(color: GlassPalette.accent.opacity(0.38), radius: 24, x: 0, y: 12)
+                Text(store.selectedChat?.emoji ?? "✨").font(.system(size: 36))
+            }
+            Text("Давай начнём.").font(.system(size: 30, weight: .bold, design: .rounded))
             Text("Твои модели. Твои идеи.\nОдин спокойный уголок для диалогов.").foregroundStyle(.secondary)
             if store.providers.isEmpty { Button("Подключить провайдера", systemImage: "plus") { settings = true }.buttonStyle(GlassButtonStyle()) }
         }
@@ -239,40 +297,74 @@ struct ContentView: View {
     private var modelMenu: some View {
         Menu {
             ForEach(store.providers) { p in
-                Section(p.name) { ForEach(p.models ?? []) { m in Button(m.name.isEmpty ? m.id : m.name) { store.select(p, model: m.id) } } }
+                Section(p.name) {
+                    ForEach(p.models ?? []) { m in
+                        Button { store.select(p, model: m.id) } label: {
+                            if m.supportsVision == true {
+                                Label(m.name.isEmpty ? m.id : m.name, systemImage: "camera.viewfinder")
+                            } else {
+                                Text(m.name.isEmpty ? m.id : m.name)
+                            }
+                        }
+                    }
+                }
             }
             Button("Настроить модели…") { settings = true }
         } label: {
-            HStack { Text(store.selectedChat?.model ?? "Выбрать модель").lineLimit(1); Spacer(); Image(systemName: "chevron.down") }
-                .font(.system(.caption, design: .monospaced))
-                .padding(10)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-        }.disabled(store.isSending)
+            HStack(spacing: 6) {
+                if store.selectedModelEntry?.supportsVision == true {
+                    Image(systemName: "camera.viewfinder").font(.caption2)
+                }
+                Text(store.selectedChat?.model ?? "Выбрать модель").lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down").font(.caption2)
+            }
+            .font(.system(.caption, design: .monospaced))
+            .padding(10)
+            .glassCapsule()
+        }
+        .disabled(store.isSending)
     }
     private var composer: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             if !attachments.isEmpty {
-                ScrollView(.horizontal) { HStack { ForEach(attachments) { a in Button { attachments.removeAll { $0.id == a.id } } label: { Label(a.name + " ×", systemImage: "paperclip").font(.caption) } } } }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(attachments) { a in
+                            AttachmentThumb(attachment: a) {
+                                attachments.removeAll { $0.id == a.id }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
             }
-            TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7).padding(.top, 4)
+            TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7)
             if let reason = store.imageSupportWarning(for: attachments) {
                 Label(reason, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption2)
                     .foregroundStyle(store.imageSupportError(for: attachments) != nil ? Color.red : Color.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            HStack {
+            HStack(spacing: 8) {
                 Menu {
                     Button("Файлы", systemImage: "folder") { importing = true }
                     Button("Галерея", systemImage: "photo.on.rectangle") { gallery = true }
-                    Button("Фото", systemImage: "camera") {
+                    Button("Камера", systemImage: "camera") {
                         if UIImagePickerController.isSourceTypeAvailable(.camera) { camera = true } else { error = "Камера недоступна" }
                     }
-                } label: { Label("Прикрепить", systemImage: "paperclip") }
+                } label: {
+                    Image(systemName: "paperclip").frame(width: 34, height: 34).glassCapsule()
+                }
                 Spacer()
                 if store.isSending {
-                    Button("Стоп", systemImage: "stop.circle.fill") { store.stop() }
+                    Button { store.stop() } label: {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 34, height: 34)
+                            .background(Circle().fill(Color.red.opacity(0.9)))
+                    }
                 } else {
                     Button {
                         if let reason = store.imageSupportError(for: attachments) {
@@ -287,10 +379,9 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "arrow.up")
                             .fontWeight(.bold)
-                            .padding(9)
-                            .background(GlassPalette.accentGradient)
                             .foregroundStyle(.black)
-                            .clipShape(Circle())
+                            .frame(width: 34, height: 34)
+                            .background(GlassPalette.accentGradient, in: Circle())
                     }
                     .disabled(
                         store.activeProvider == nil
@@ -361,36 +452,120 @@ struct ContentView: View {
     }
 }
 
+struct AttachmentThumb: View {
+    let attachment: Attachment
+    let onRemove: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            if attachment.mime.hasPrefix("image/"),
+               let image = UIImage(data: attachment.data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 58, height: 58)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 58, height: 58)
+                    .overlay {
+                        Image(systemName: "doc.fill")
+                            .foregroundStyle(Palette.accent)
+                    }
+            }
+
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 18, height: 18)
+                    .background(Color.black.opacity(0.6), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .offset(x: 5, y: -5)
+        }
+        .padding(.top, 5)
+        .padding(.trailing, 5)
+    }
+}
+
 struct MessageView: View {
     let message: Message
     var waiting = false
+
+    private var isUser: Bool { message.role == "user" }
+
+    private var images: [Attachment] {
+        message.attachments.filter { $0.mime.hasPrefix("image/") }
+    }
+
+    private var files: [Attachment] {
+        message.attachments.filter { !$0.mime.hasPrefix("image/") }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if message.role == "user" || !message.text.isEmpty || !(message.media ?? []).isEmpty {
-                Label(message.role == "user" ? "ТЫ" : message.modelName ?? "Модель", systemImage: message.role == "user" ? "person.crop.circle" : "sparkle").font(.system(.caption, design: .monospaced)).foregroundStyle(Palette.accent)
-            }
+            Label(
+                isUser ? "ТЫ" : (message.modelName ?? "Модель"),
+                systemImage: isUser ? "person.fill" : "sparkle"
+            )
+            .font(.system(size: 10, weight: .semibold, design: .rounded))
+            .foregroundStyle(isUser ? Palette.accent : GlassPalette.cyan)
+
             if message.role == "assistant" && (waiting || message.thinking != nil) {
                 DisclosureGroup {
-                    Text(message.thinking ?? "Провайдер не передаёт текст рассуждений.").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                    Text(message.thinking ?? "Провайдер не передаёт текст рассуждений.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 } label: {
-                    HStack { if waiting && message.text.isEmpty { TypingDots() }; Text(waiting && message.text.isEmpty ? "Думает…" : "Мышление") }
+                    HStack {
+                        if waiting && message.text.isEmpty { TypingDots() }
+                        Text(waiting && message.text.isEmpty ? "Думает…" : "Мышление")
+                            .font(.caption)
+                    }
                 }
             }
-            ForEach(message.attachments) { a in Label(a.name, systemImage: "doc").font(.caption).foregroundStyle(.secondary) }
+
+            if !images.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(images) { a in
+                            if let image = UIImage(data: a.data) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 108, height: 108)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ForEach(files) { a in
+                Label(a.name, systemImage: "doc.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             MarkdownMessage(text: message.text)
+
             ForEach(message.media ?? []) { media in GeneratedMediaView(media: media) }
-            if let u = message.usage { Text("↑ \(u.input.map(String.init) ?? "—")   ↓ \(u.output.map(String.init) ?? "—") токенов").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary) }
+
+            if let u = message.usage {
+                Text("↑ \(u.input.map(String.init) ?? "—")   ↓ \(u.output.map(String.init) ?? "—") токенов")
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(16)
-        .background {
-            if message.role == "user" {
-                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.ultraThinMaterial)
-            }
-        }
-        .overlay {
-            if message.role == "user" {
-                RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Palette.accent.opacity(0.28), lineWidth: 1)
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassSurface(radius: 20, tint: isUser ? Palette.accent : .clear)
     }
 }

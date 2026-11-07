@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import Security
+import UIKit
 
 @MainActor final class ChatStore: ObservableObject {
     @Published var chats: [Chat] = []
@@ -92,8 +93,10 @@ import Security
         isGeneratingImage = true
         let runID = UUID()
         activeImageRun = runID
-        imageTask = Task { [weak self] in
+        imageTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
+            let backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "klain.image")
+            defer { UIApplication.shared.endBackgroundTask(backgroundTask) }
             do {
                 let data = try await self.api.generateImage(provider: provider, model: model, prompt: trimmed, size: size)
                 guard self.activeImageRun == runID else { return }
