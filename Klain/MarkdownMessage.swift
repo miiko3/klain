@@ -132,11 +132,9 @@ enum MDBlock {
 }
 
 // MARK: - Inline (AttributedString markdown + safe links)
-
+// Uses the baseline initializer only — max compatibility across iOS SDKs.
 func mdInline(_ raw: String) -> AttributedString {
-    var opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-    opts.allowsImageAttributes = false
-    var s = (try? AttributedString(markdown: raw, options: opts)) ?? AttributedString(raw)
+    var s = (try? AttributedString(markdown: raw)) ?? AttributedString(raw)
     for run in s.runs where run.link != nil { s[run.range].foregroundColor = .cyan }
     return s
 }
