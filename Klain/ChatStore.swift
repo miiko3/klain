@@ -15,6 +15,8 @@ import UIKit
     @Published var drafts: [Provider] = []
     @Published var generatedImages: [GeneratedImage] = []
     @Published var isGeneratingImage = false
+    @Published var currentImagePrompt = ""
+    @Published var latestImageID: UUID?
     @Published var defaultModel: String = "" {
         didSet { UserDefaults.standard.set(defaultModel, forKey: "klain.defaultModel") }
     }
@@ -90,6 +92,8 @@ import UIKit
         error = nil
         imageModel = model
         imageSize = size
+        currentImagePrompt = trimmed
+        latestImageID = nil
         isGeneratingImage = true
         let runID = UUID()
         activeImageRun = runID
@@ -100,7 +104,9 @@ import UIKit
             do {
                 let data = try await self.api.generateImage(provider: provider, model: model, prompt: trimmed, size: size)
                 guard self.activeImageRun == runID else { return }
-                self.generatedImages.insert(GeneratedImage(prompt: trimmed, model: model, size: size, data: data), at: 0)
+                let generated = GeneratedImage(prompt: trimmed, model: model, size: size, data: data)
+                self.generatedImages.insert(generated, at: 0)
+                self.latestImageID = generated.id
                 if self.generatedImages.count > 20 {
                     self.generatedImages.removeLast(self.generatedImages.count - 20)
                 }
@@ -123,6 +129,8 @@ import UIKit
         imageTask = nil
         activeImageRun = nil
         isGeneratingImage = false
+        currentImagePrompt = ""
+        latestImageID = nil
     }
     func deleteGeneratedImage(_ id: UUID) {
         generatedImages.removeAll { $0.id == id }

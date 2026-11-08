@@ -194,29 +194,28 @@ struct ImageStudioView: View {
                 generatingRow
             }
 
-            if store.isGeneratingImage {
-                ForEach(store.generatedImages.prefix(1)) { item in
-                    if let image = UIImage(data: item.data) {
-                        Button { selected = item } label: {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 150)
-                                .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                .overlay(alignment: .topTrailing) {
-                                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .padding(6)
-                                        .background(.black.opacity(0.35), in: Circle())
-                                        .padding(8)
-                                }
+            if store.isGeneratingImage,
+               let latestID = store.latestImageID,
+               let latest = store.generatedImages.first(where: { $0.id == latestID }),
+               let image = UIImage(data: latest.data) {
+                Button { selected = latest } label: {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 150)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(alignment: .topTrailing) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(.black.opacity(0.35), in: Circle())
+                                .padding(8)
                         }
-                        .buttonStyle(.plain)
-                    }
                 }
+                .buttonStyle(.plain)
             }
 
             TextField("Опиши изображение…", text: $prompt, axis: .vertical)
@@ -297,9 +296,10 @@ struct ImageStudioView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Генерирую…")
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                Text("Обычно 10–60 секунд")
+                Text(store.currentImagePrompt.isEmpty ? "Обычно 10–60 секунд" : store.currentImagePrompt)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer()
         }
