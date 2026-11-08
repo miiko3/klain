@@ -323,7 +323,7 @@ struct ProviderEditor: View {
     private var headersSection: some View {
         editorCard(title: "ЗАГОЛОВКИ", tint: GlassPalette.cyan) {
             ForEach($headers) { $h in
-                headerRow(h)
+                headerRow($h)
             }
             Button {
                 headers.append(HeaderEntry())
