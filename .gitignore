@@ -1,0 +1,10 @@
+# Klain 0.6 alpha release: commit only the iOS sources + the Windows lab.
+# The rest of this mixed working folder is unrelated user data.
+*
+!Klain/
+!Klain/**
+!KlainLab/
+!KlainLab/**
+!.gitignore
+!KLAIN_README.md
+!README.md

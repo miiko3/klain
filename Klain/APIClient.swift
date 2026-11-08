@@ -1,0 +1,267 @@
+import Foundation
+
+enum APIEvent {
+    case text(String), usage(Usage), remaining(String)
+    case media(GeneratedMedia)
+    case thinking(String)
+}
+
+struct APIClient {
+    private func request(_ p: Provider, path: String) throws -> URLRequest {
+        var base = p.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        while base.hasSuffix("/") { base.removeLast() }
+        guard !base.isEmpty,
+              let url = URL(string: base + path),
+              url.scheme == "https",
+              url.host != nil else { throw failure("Нужен корректный HTTPS URL") }
+        var r = URLRequest(url: url)
+        r.timeoutInterval = 120
+        if !p.apiKey.isEmpty {
+            r.setValue(p.kind == "anthropic" ? p.apiKey : "Bearer \(p.apiKey)", forHTTPHeaderField: p.kind == "anthropic" ? "x-api-key" : "Authorization")
+        }
+        if p.kind == "anthropic" { r.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version") }
+        for h in p.headers ?? [] where !h.name.isEmpty { r.setValue(h.value, forHTTPHeaderField: h.name) }
+        return r
+    }
+    private func failure(_ text: String) -> NSError { NSError(domain: "klain.API", code: 1, userInfo: [NSLocalizedDescriptionKey: text]) }
+    private func validate(_ response: URLResponse, data: Data = Data()) throws {
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw httpError(response: response, data: data)
+        }
+    }
+    private func httpError(response: URLResponse, data: Data) -> NSError {
+        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
+                return failure("HTTP \(code): \(redact(message))")
+            }
+            if let message = json["message"] as? String {
+                return failure("HTTP \(code): \(redact(message))")
+            }
+        }
+        let text = (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let suffix = text.isEmpty ? "" : ": \(redact(String(text.prefix(300))))"
+        return failure("API вернул HTTP \(code)\(suffix)")
+    }
+    private func redact(_ text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: #"sk-[A-Za-z0-9_\-]{4,}"#) else { return text }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.stringByReplacingMatches(in: text, range: range, withTemplate: "sk-***")
+    }
+    func models(provider: Provider) async throws -> [ModelEntry] {
+        var result: [ModelEntry] = []
+        var path = "/models"
+        for _ in 0..<100 {
+            let (data, response) = try await URLSession.shared.data(for: request(provider, path: path)); try validate(response, data: data)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw failure("Не удалось разобрать список моделей. Добавь ID вручную.") }
+            let items = (json["data"] as? [[String: Any]]) ?? (json["models"] as? [[String: Any]]) ?? []
+            guard !items.isEmpty else { throw failure("Провайдер не вернул список моделей. Добавь ID вручную.") }
+            result += items.compactMap { item in
+                guard let id = item["id"] as? String else { return nil }
+                let architecture = item["architecture"] as? [String: Any]
+                let output = architecture?["output_modalities"] as? [String]
+                var input = architecture?["input_modalities"] as? [String]
+                if input == nil, let modality = architecture?["modality"] as? String, let left = modality.split(separator: "->").first {
+                    input = left.split(separator: "+").map(String.init)
+                }
+                return ModelEntry(
+                    id: id,
+                    name: item["display_name"] as? String ?? item["name"] as? String ?? id,
+                    outputModalities: output,
+                    inputModalities: input
+                )
+            }
+            guard provider.kind == "anthropic", json["has_more"] as? Bool == true, let last = json["last_id"] as? String, let encoded = last.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { break }
+            path = "/models?after_id=\(encoded)"
+        }
+        var seen = Set<String>()
+        return result.filter { seen.insert($0.id).inserted }.sorted { $0.id < $1.id }
+    }
+    func balance(provider: Provider) async throws -> String {
+        let host = URL(string: provider.baseURL)?.host
+        if host == "openrouter.ai" {
+            let (data, response) = try await URLSession.shared.data(for: request(provider, path: "/key")); try validate(response, data: data)
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            if let info = json?["data"] as? [String: Any], let remaining = info["limit_remaining"] as? Double { return String(format: "Остаток лимита ключа: $%.4f", remaining) }
+            return "Лимит ключа не задан; баланс счёта неизвестен"
+        }
+        return "Баланс: нет данных API"
+    }
+    func generateImage(provider: Provider, model: String, prompt: String, size: String) async throws -> Data {
+        var urlRequest = try request(provider, path: "/images/generations")
+        urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = 180
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        let body: [String: Any] = ["model": model, "prompt": prompt, "n": 1, "size": size]
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        try validate(response, data: data)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw failure("Не удалось разобрать ответ API.")
+        }
+        if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
+            throw failure(redact(message))
+        }
+        guard let rows = json["data"] as? [[String: Any]], let first = rows.first else {
+            throw failure("Провайдер не вернул изображение.")
+        }
+        if let base64 = first["b64_json"] as? String, let decoded = Data(base64Encoded: base64) {
+            return decoded
+        }
+        if let value = first["url"] as? String {
+            if value.hasPrefix("data:"), let comma = value.firstIndex(of: ","), let decoded = Data(base64Encoded: String(value[value.index(after: comma)...])) {
+                return decoded
+            }
+            if let url = URL(string: value) {
+                let (imageData, imageResponse) = try await URLSession.shared.data(from: url)
+                try validate(imageResponse, data: imageData)
+                if !imageData.isEmpty { return imageData }
+            }
+        }
+        throw failure("Провайдер не вернул изображение.")
+    }
+    func stream(chat: Chat, provider: Provider) -> AsyncThrowingStream<APIEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let anthropic = provider.kind == "anthropic"
+                    let supportsImages = provider.models?.first(where: { $0.id == chat.model })?.inputModalities?.contains("image") ?? true
+                    let outgoing = try chat.messages.filter { item in
+                        guard item.failed != true else { return false }
+                        if item.role == "assistant", item.text.hasPrefix("Ошибка:") || item.text.hasPrefix("\nОшибка:") {
+                            return false
+                        }
+                        return !item.text.isEmpty || !item.attachments.isEmpty
+                    }.map { original in
+                        var item = original
+                        if !supportsImages {
+                            item.attachments = item.attachments.filter { !$0.mime.hasPrefix("image/") }
+                        }
+                        return try self.message(item, provider: provider)
+                    }
+                    let baseBody: [String: Any] = ["model": chat.model, "stream": true, "messages": outgoing]
+
+                    func makeRequest(includeUsage: Bool) throws -> URLRequest {
+                        var body = baseBody
+                        if anthropic { body["max_tokens"] = 8192 }
+                        else if includeUsage { body["stream_options"] = ["include_usage": true] }
+                        if URL(string: provider.baseURL)?.host == "openrouter.ai", let outputs = provider.models?.first(where: { $0.id == chat.model })?.outputModalities, outputs.contains("image") { body["modalities"] = outputs }
+                        if let effort = chat.reasoning, effort != "default" {
+                            if anthropic {
+                                body["thinking"] = ["type": "adaptive"]
+                                body["output_config"] = ["effort": effort == "xhigh" ? "max" : effort]
+                            } else if URL(string: provider.baseURL)?.host == "openrouter.ai" {
+                                body["reasoning"] = ["effort": effort == "max" ? "xhigh" : effort]
+                            } else { body["reasoning_effort"] = effort == "max" ? "xhigh" : effort }
+                        }
+                        if chat.webSearch == true {
+                            if anthropic { body["tools"] = [["type": "web_search_20250305", "name": "web_search"]] }
+                            else { body["tools"] = [["type": "web_search"]] }
+                        }
+                        var r = try request(provider, path: anthropic ? "/messages" : "/chat/completions")
+                        r.httpMethod = "POST"
+                        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                        r.httpBody = try JSONSerialization.data(withJSONObject: body)
+                        return r
+                    }
+
+                    func openStream(includeUsage: Bool) async throws -> (URLSession.AsyncBytes, HTTPURLResponse) {
+                        let (bytes, response) = try await URLSession.shared.bytes(for: makeRequest(includeUsage: includeUsage))
+                        guard let http = response as? HTTPURLResponse else { throw failure("Некорректный ответ API") }
+                        if !(200..<300).contains(http.statusCode) {
+                            var data = Data()
+                            for try await byte in bytes {
+                                data.append(byte)
+                                if data.count >= 64_000 { break }
+                            }
+                            throw httpError(response: http, data: data)
+                        }
+                        return (bytes, http)
+                    }
+
+                    let opened: (URLSession.AsyncBytes, HTTPURLResponse)
+                    do {
+                        opened = try await openStream(includeUsage: !anthropic)
+                    } catch {
+                        if !anthropic, error.localizedDescription.lowercased().contains("stream_options") {
+                            opened = try await openStream(includeUsage: false)
+                        } else {
+                            throw error
+                        }
+                    }
+                    let (bytes, http) = opened
+                    let names = ["x-ratelimit-remaining-tokens", "anthropic-ratelimit-tokens-remaining", "anthropic-ratelimit-input-tokens-remaining", "anthropic-ratelimit-output-tokens-remaining"]
+                    let values = names.compactMap { name in http.value(forHTTPHeaderField: name).map { "\(name): \($0)" } }
+                    if !values.isEmpty { continuation.yield(.remaining(values.joined(separator: "\n") + "\nОстаток окна rate limit, не баланс аккаунта.")) }
+                    var usage = Usage()
+                    for try await line in bytes.lines {
+                        try Task.checkCancellation()
+                        guard line.hasPrefix("data:") else { continue }
+                        let payload = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+                        if payload == "[DONE]" { break }
+                        guard let data = payload.data(using: .utf8), let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+                        if let error = json["error"] as? [String: Any] { throw failure(redact(error["message"] as? String ?? "Ошибка потока API")) }
+                        if anthropic {
+                            if let delta = json["delta"] as? [String: Any], let text = delta["thinking"] as? String { continuation.yield(.thinking(text)) }
+                            if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String { continuation.yield(.text(text)) }
+                            let start = (json["message"] as? [String: Any])?["usage"] as? [String: Any]
+                            if let u = start ?? json["usage"] as? [String: Any] {
+                                if let input = u["input_tokens"] as? Int { usage.input = input + (u["cache_read_input_tokens"] as? Int ?? 0) + (u["cache_creation_input_tokens"] as? Int ?? 0) }
+                                if let output = u["output_tokens"] as? Int { usage.output = output }
+                                if let cached = u["cache_read_input_tokens"] as? Int { usage.cached = cached }
+                                continuation.yield(.usage(usage))
+                            }
+                        } else {
+                            if let choices = json["choices"] as? [[String: Any]], let delta = choices.first?["delta"] as? [String: Any] {
+                                if let thought = delta["reasoning_content"] as? String ?? delta["reasoning"] as? String { continuation.yield(.thinking(thought)) }
+                                if let text = delta["content"] as? String { continuation.yield(.text(text)) }
+                                let parts = (delta["images"] as? [[String: Any]] ?? []) + (delta["content"] as? [[String: Any]] ?? [])
+                                for part in parts {
+                                    if let text = part["text"] as? String { continuation.yield(.text(text)) }
+                                    if let image = part["image_url"] as? [String: Any], let url = image["url"] as? String { continuation.yield(.media(GeneratedMedia(url: url, kind: "image"))) }
+                                    if let video = part["video_url"] as? [String: Any], let url = video["url"] as? String { continuation.yield(.media(GeneratedMedia(url: url, kind: "video"))) }
+                                }
+                            }
+                            if let u = json["usage"] as? [String: Any] {
+                                usage.input = u["prompt_tokens"] as? Int ?? usage.input
+                                usage.output = u["completion_tokens"] as? Int ?? usage.output
+                                usage.cached = (u["prompt_tokens_details"] as? [String: Any])?["cached_tokens"] as? Int ?? usage.cached
+                                usage.cost = u["cost"] as? Double ?? usage.cost
+                                continuation.yield(.usage(usage))
+                            }
+                        }
+                    }
+                    continuation.finish()
+                } catch { continuation.finish(throwing: error) }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+    private func message(_ m: Message, provider: Provider) throws -> [String: Any] {
+        let anthropic = provider.kind == "anthropic"
+        var parts: [[String: Any]] = m.text.isEmpty ? [] : [["type": "text", "text": m.text]]
+        for original in m.attachments {
+            let a: Attachment
+            if original.mime.hasPrefix("image/"),
+               original.mime != "image/jpeg",
+               original.mime != "image/png",
+               let normalized = ImageTools.attachment(name: original.name, data: original.data) {
+                a = normalized
+            } else {
+                a = original
+            }
+            let base64 = a.data.base64EncodedString()
+            let encoded = "data:\(a.mime);base64,\(base64)"
+            if anthropic && (a.mime.hasPrefix("image/") || a.mime == "application/pdf") {
+                parts.append(["type": a.mime == "application/pdf" ? "document" : "image", "source": ["type": "base64", "media_type": a.mime, "data": base64]])
+            } else if a.mime.hasPrefix("image/") { parts.append(["type": "image_url", "image_url": ["url": encoded]]) }
+            else if a.mime.hasPrefix("video/") && provider.kind == "google" { parts.append(["type": "video_url", "video_url": ["url": encoded]]) }
+            else if a.mime.hasPrefix("video/") && URL(string: provider.baseURL)?.host == "openrouter.ai" { parts.append(["type": "video_url", "video_url": ["url": encoded]]) }
+            else if a.mime == "application/pdf" && URL(string: provider.baseURL)?.host == "openrouter.ai" { parts.append(["type": "file", "file": ["filename": a.name, "file_data": encoded]]) }
+            else if let text = String(data: a.data, encoding: .utf8) { parts.append(["type": "text", "text": "Файл: \(a.name)\n\(text)"]) }
+            else { throw failure("\(a.name): формат не поддержан этим подключением.") }
+        }
+        return ["role": m.role, "content": m.attachments.isEmpty ? m.text as Any : parts as Any]
+    }
+}
