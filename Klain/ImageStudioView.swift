@@ -257,7 +257,7 @@ struct ImageStudioView: View {
             }
 
             HStack(spacing: 8) {
-                if !prompt.isEmpty {
+                if !prompt.isEmpty && !store.isGeneratingImage {
                     Button("Очистить") { prompt = "" }
                         .buttonStyle(.plain)
                         .font(.caption)
@@ -296,10 +296,9 @@ struct ImageStudioView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Генерирую…")
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                Text(store.currentImagePrompt.isEmpty ? "Обычно 10–60 секунд" : store.currentImagePrompt)
+                Text("Обычно 10–60 секунд")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
             Spacer()
         }
@@ -336,6 +335,7 @@ struct ImageStudioView: View {
         guard let provider, canGenerate else { return }
         focused = false
         store.generateImage(prompt: prompt, model: model, size: size, provider: provider)
+        prompt = ""
     }
 
     private func save(_ item: GeneratedImage) async {
