@@ -277,11 +277,17 @@ struct ContentView: View {
     private var welcome: some View {
         VStack(alignment: .center, spacing: 16) {
             ZStack {
-                Circle()
-                    .fill(GlassPalette.accentGradient)
-                    .frame(width: 76, height: 76)
-                    .shadow(color: GlassPalette.accent.opacity(0.38), radius: 24, x: 0, y: 12)
-                Text(store.selectedChat?.emoji ?? "✨").font(.system(size: 36))
+                Image("BrandLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
+                    .shadow(color: GlassPalette.accent.opacity(0.30), radius: 24, x: 0, y: 10)
+
+                Text(store.selectedChat?.emoji ?? "✨")
+                    .font(.system(size: 26))
+                    .offset(y: -46)
+                    .padding(6)
+                    .background(.ultraThinMaterial, in: Circle())
             }
             Text("Давай начнём.").font(.system(size: 30, weight: .bold, design: .rounded))
             Text("Твои модели. Твои идеи.\nОдин спокойный уголок для диалогов.").foregroundStyle(.secondary)
