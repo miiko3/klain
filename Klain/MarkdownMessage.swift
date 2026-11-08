@@ -135,7 +135,7 @@ enum MDBlock {
 // Uses the baseline initializer only — max compatibility across iOS SDKs.
 func mdInline(_ raw: String) -> AttributedString {
     var s = (try? AttributedString(markdown: raw)) ?? AttributedString(raw)
-    for run in s.runs where run.link != nil { s[run.range].foregroundColor = .cyan }
+    for run in s.runs where run.link != nil { s[run.range].foregroundColor = .primary }
     return s
 }
 
@@ -156,10 +156,9 @@ struct MDBlockView: View {
                 ScrollView(.horizontal) { Text(verbatim: code).font(.system(.callout, design: .monospaced)).textSelection(.enabled) }
             }
             .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 1))
         case .quote(let blocks):
             HStack(alignment: .top, spacing: 8) {
-                RoundedRectangle(cornerRadius: 2).fill(GlassPalette.accent).frame(width: 3)
+                RoundedRectangle(cornerRadius: 2).fill(Color.primary.opacity(0.5)).frame(width: 3)
                 VStack(alignment: .leading, spacing: 4) { ForEach(Array(blocks.enumerated()), id: \.offset) { _, b in MDBlockView(block: b) } }
             }.padding(.vertical, 4)
         case .rule:
@@ -168,7 +167,7 @@ struct MDBlockView: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                     HStack(alignment: .top, spacing: 7) {
-                        if let c = item.checked { Image(systemName: c ? "checkmark.square.fill" : "square").foregroundStyle(GlassPalette.accent) }
+                        if let c = item.checked { Image(systemName: c ? "checkmark.square" : "square").foregroundStyle(.primary) }
                         else { Text(ordered ? "\(idx + 1)." : "•").foregroundStyle(.secondary) }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(mdInline(item.text)).font(.body).fixedSize(horizontal: false, vertical: true)
@@ -193,7 +192,6 @@ struct MDBlockView: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 1))
             }
         }
     }

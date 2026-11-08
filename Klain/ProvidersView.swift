@@ -7,7 +7,7 @@ struct ProviderPreset: Identifiable {
         .init(id: "openai", name: "OpenAI", url: "https://api.openai.com/v1", symbol: "sparkle"),
         .init(id: "google", name: "Google", url: "https://generativelanguage.googleapis.com/v1beta/openai", symbol: "sparkles"),
         .init(id: "openrouter", name: "OpenRouter", url: "https://openrouter.ai/api/v1", symbol: "arrow.triangle.branch"),
-        .init(id: "vercel", name: "Vercel AI Gateway", url: "https://ai-gateway.vercel.sh/v1", symbol: "triangle.fill"),
+        .init(id: "vercel", name: "Vercel AI Gateway", url: "https://ai-gateway.vercel.sh/v1", symbol: "triangle"),
         .init(id: "custom", name: "Пользовательский провайдер", url: "", symbol: "slider.horizontal.3")
     ]
 }
@@ -52,7 +52,7 @@ struct ProvidersView: View {
                                     providerRow(
                                         title: p.name,
                                         subtitle: "\(p.models?.count ?? 0) моделей",
-                                        icon: "circle.grid.2x2.fill",
+                                        icon: "circle.grid.2x2",
                                         tint: GlassPalette.mint,
                                         trailing: nil
                                     ) { editing = p }
@@ -99,8 +99,7 @@ struct ProvidersView: View {
             .sheet(item: $editing) { ProviderEditor(provider: $0) }
             .alert("Ошибка", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
         }
-        .tint(GlassPalette.accent)
-        .preferredColorScheme(.dark)
+        .tint(Color.primary)
     }
 
     private func card<Content: View>(title: String, tint: Color, @ViewBuilder content: () -> Content) -> some View {
@@ -129,7 +128,7 @@ struct ProvidersView: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(tint)
+                    .foregroundStyle(.primary)
                     .frame(width: 32, height: 32)
                     .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
@@ -151,8 +150,7 @@ struct ProvidersView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(10)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 0.8))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -192,10 +190,10 @@ struct ProviderEditor: View {
                         if !error.isEmpty {
                             Text(error)
                                 .font(.caption)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(14)
-                                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         }
                     }
                     .padding(16)
@@ -213,7 +211,7 @@ struct ProviderEditor: View {
             .onChange(of: scenePhase) { _, _ in persistDraft() }
             .onDisappear { persistDraft() }
             .alert("О генерации медиа", isPresented: $showMediaNotice) { Button("Понятно") { dismiss() } } message: { Text(mediaNotice) }
-        }.preferredColorScheme(.dark).tint(GlassPalette.accent)
+        }.tint(Color.primary)
     }
     private var connectionSection: some View {
         editorCard(title: "ПОДКЛЮЧЕНИЕ", tint: GlassPalette.accent) {
@@ -303,7 +301,7 @@ struct ProviderEditor: View {
             .buttonStyle(.plain)
         }
         .padding(10)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     @ViewBuilder
@@ -316,7 +314,7 @@ struct ProviderEditor: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
-                .background(Color.white.opacity(0.08), in: Capsule())
+                .background(Color.primary.opacity(0.08), in: Capsule())
         }
     }
 
@@ -350,7 +348,7 @@ struct ProviderEditor: View {
             .buttonStyle(.plain)
         }
         .padding(10)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func editorCard<Content: View>(title: String, tint: Color, @ViewBuilder content: () -> Content) -> some View {
@@ -367,8 +365,7 @@ struct ProviderEditor: View {
     }
     private func fieldBox<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 0.8))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
     private func loadModels() {
         loading = true

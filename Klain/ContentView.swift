@@ -4,9 +4,9 @@ import PhotosUI
 import UIKit
 
 enum Palette {
-    static let background = Color(red: 0.09, green: 0.09, blue: 0.085)
-    static let panel = Color(red: 0.14, green: 0.14, blue: 0.13)
-    static let accent = Color(red: 0.82, green: 0.48, blue: 0.35)
+    static let background = Color.primary.opacity(0.04)
+    static let panel = Color.primary.opacity(0.06)
+    static let accent = Color.primary
 }
 
 private struct ChatBottomPrefKey: PreferenceKey {
@@ -45,7 +45,7 @@ struct ContentView: View {
                     }
                 }
         }
-        .preferredColorScheme(.dark).tint(GlassPalette.accent)
+        .tint(Color.primary)
         .confirmationDialog("Удалить чат?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             Button("Удалить навсегда", role: .destructive) { if let id = deleting { store.deleteChat(id) }; deleting = nil }
             Button("Отмена", role: .cancel) { deleting = nil }
@@ -119,29 +119,24 @@ struct ContentView: View {
     }
     private var homeMenu: some View {
         HStack(spacing: 6) {
-            menuButton("Чаты", icon: "bubble.left.and.bubble.right.fill", tint: GlassPalette.accent, action: { path.append(.chats) })
-            menuButton("Картинки", icon: "sparkles", tint: GlassPalette.accent2, action: { path.append(.images) })
-            menuButton("Настройки", icon: "slider.horizontal.3", tint: GlassPalette.cyan, action: { path.append(.settings) })
+            menuButton("Чаты", icon: "bubble.left.and.bubble.right", tint: Color.primary, action: { path.append(.chats) })
+            menuButton("Картинки", icon: "sparkles", tint: Color.primary, action: { path.append(.images) })
+            menuButton("Настройки", icon: "slider.horizontal.3", tint: Color.primary, action: { path.append(.settings) })
         }
-        .padding(7)
-        .glassSurface(radius: 30)
         .padding(.horizontal, 16)
         .padding(.bottom, 22)
+        // No flat backing plate: content stays visible under the floating menu.
     }
     private func menuButton(_ title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(tint)
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(.primary)
                     .frame(width: 42, height: 42)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .overlay(Circle().fill(tint.opacity(0.20)))
-                    )
+                    .background(.ultraThinMaterial, in: Circle())
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12, weight: .regular, design: .rounded))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -199,7 +194,7 @@ struct ContentView: View {
             .listRowSeparator(.hidden)
             .swipeActions(allowsFullSwipe: false) {
                 Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
-                Button(archived ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !archived) }.tint(.orange).disabled(store.isSending)
+                Button(archived ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !archived) }.disabled(store.isSending)
             }
         }
     }
@@ -241,9 +236,9 @@ struct ContentView: View {
                         Label("Сеть", systemImage: "globe")
                             .font(.caption)
                             .padding(10)
-                            .background(store.selectedChat?.webSearch == true ? Palette.accent : Color.clear, in: Capsule())
-                            .glassCapsule(tint: store.selectedChat?.webSearch == true ? Palette.accent : .clear)
-                            .foregroundStyle(store.selectedChat?.webSearch == true ? .black : Palette.accent)
+                            .background(store.selectedChat?.webSearch == true ? Color.primary.opacity(0.18) : Color.clear, in: Capsule())
+                            .glassCapsule()
+                            .foregroundStyle(.primary)
                     }
                         .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
                 }
@@ -308,7 +303,6 @@ struct ContentView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 120, height: 120)
-                    .shadow(color: GlassPalette.accent.opacity(0.30), radius: 24, x: 0, y: 10)
 
                 Text(store.selectedChat?.emoji ?? "✨")
                     .font(.system(size: 26))
@@ -372,9 +366,9 @@ struct ContentView: View {
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7)
             if let reason = store.imageSupportWarning(for: attachments) {
-                Label(reason, systemImage: "exclamationmark.triangle.fill")
+                Label(reason, systemImage: "exclamationmark.triangle")
                     .font(.caption2)
-                    .foregroundStyle(store.imageSupportError(for: attachments) != nil ? Color.red : Color.orange)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 8) {
@@ -390,11 +384,11 @@ struct ContentView: View {
                 Spacer()
                 if store.isSending {
                     Button { store.stop() } label: {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
+                        Image(systemName: "stop")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(.primary)
                             .frame(width: 34, height: 34)
-                            .background(Circle().fill(Color.red.opacity(0.9)))
+                            .background(.ultraThinMaterial, in: Circle())
                     }
                 } else {
                     Button {
@@ -409,10 +403,10 @@ struct ContentView: View {
                         store.start(text, attachments: files)
                     } label: {
                         Image(systemName: "arrow.up")
-                            .fontWeight(.bold)
-                            .foregroundStyle(.black)
+                            .fontWeight(.regular)
+                            .foregroundStyle(Color.primary)
                             .frame(width: 34, height: 34)
-                            .background(GlassPalette.accentGradient, in: Circle())
+                            .background(.ultraThinMaterial, in: Circle())
                     }
                     .disabled(
                         store.activeProvider == nil
@@ -424,7 +418,7 @@ struct ContentView: View {
             }
         }
         .padding(14)
-        .glassSurface(radius: 24)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(12)
     }
     private func importFiles(_ result: Result<[URL], Error>) {
@@ -501,17 +495,17 @@ struct AttachmentThumb: View {
                     .fill(.ultraThinMaterial)
                     .frame(width: 58, height: 58)
                     .overlay {
-                        Image(systemName: "doc.fill")
-                            .foregroundStyle(Palette.accent)
+                        Image(systemName: "doc")
+                            .foregroundStyle(.secondary)
                     }
             }
 
             Button(action: onRemove) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 8, weight: .regular))
+                    .foregroundStyle(.primary)
                     .frame(width: 18, height: 18)
-                    .background(Color.black.opacity(0.6), in: Circle())
+                    .background(.ultraThinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .offset(x: 5, y: -5)
@@ -539,10 +533,10 @@ struct MessageView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label(
                 isUser ? "ТЫ" : (message.modelName ?? "Модель"),
-                systemImage: isUser ? "person.fill" : "sparkle"
+                systemImage: isUser ? "person" : "sparkle"
             )
-            .font(.system(size: 10, weight: .semibold, design: .rounded))
-            .foregroundStyle(isUser ? GlassPalette.accent : GlassPalette.cyan)
+            .font(.system(size: 10, weight: .regular, design: .rounded))
+            .foregroundStyle(.secondary)
 
             if message.role == "assistant" && (waiting || message.thinking != nil) {
                 DisclosureGroup {
@@ -569,10 +563,6 @@ struct MessageView: View {
                                     .scaledToFill()
                                     .frame(width: 108, height: 108)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .strokeBorder(.white.opacity(0.18), lineWidth: 1)
-                                    }
                             }
                         }
                     }
@@ -580,7 +570,7 @@ struct MessageView: View {
             }
 
             ForEach(files) { a in
-                Label(a.name, systemImage: "doc.fill")
+                Label(a.name, systemImage: "doc")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -597,6 +587,6 @@ struct MessageView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(radius: 22, tint: isUser ? GlassPalette.accent : GlassPalette.violet)
+        .glassSurface(radius: 22)
     }
 }

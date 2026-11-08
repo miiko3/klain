@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.DS_Store
+_*tmp*
+_models_tmp.json
+state.json
+*.ods.tmp

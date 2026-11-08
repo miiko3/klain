@@ -89,12 +89,11 @@ struct StatisticsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(GlassPalette.accent)
+                        .foregroundStyle(.primary)
                 }
             }
         }
-        .preferredColorScheme(.dark)
-        .tint(GlassPalette.accent)
+        .tint(Color.primary)
     }
 
     private var totals: some View {
@@ -196,7 +195,7 @@ struct StatisticsView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.system(.headline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(.caption2, design: .rounded))
@@ -210,7 +209,7 @@ struct StatisticsView: View {
     private func iconCircle(_ icon: String, color: Color) -> some View {
         Image(systemName: icon)
             .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .frame(width: 30, height: 30)
             .background(color.opacity(0.85), in: Circle())
     }
@@ -220,20 +219,20 @@ struct StatisticsView: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(color)
+                    .foregroundStyle(.primary)
                 Text(title)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.65))
             }
             Text(value)
                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
     }
 
     private func row(color: Color, icon: String, title: String, subtitle: String, input: Int, output: Int, count: Int) -> some View {
@@ -242,7 +241,7 @@ struct StatisticsView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title.isEmpty ? "Без названия" : title)
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(subtitle.isEmpty ? "—" : subtitle)
                     .font(.system(.caption, design: .rounded))
@@ -264,7 +263,7 @@ struct StatisticsView: View {
             }
         }
         .padding(12)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
     }
 
     private func providerRow(_ provider: Provider, color: Color) -> some View {
@@ -273,7 +272,7 @@ struct StatisticsView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(provider.name)
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(store.remaining[provider.id] ?? "Остаток токенов: нет данных")
                     .font(.system(size: 11, design: .rounded))
@@ -287,7 +286,7 @@ struct StatisticsView: View {
                 .multilineTextAlignment(.trailing)
         }
         .padding(12)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
     }
 
     private func placeholder(icon: String, title: String, subtitle: String) -> some View {
@@ -305,7 +304,7 @@ struct StatisticsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 22)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func refreshBalances() {

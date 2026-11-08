@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Klain Lab — живые макеты iPhone</title>
+<link rel="stylesheet" href="/shell.css">
+<script>window.__LAB_TOKEN__ = '__LAB_TOKEN__';</script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="dot"></span><b>Klain Lab</b><small>живые макеты · рабочий порт</small></div>
+  <div class="top-actions">
+    <span id="live-status" class="status">● подключено</span>
+    <button class="tb" id="btn-reload" title="Перезагрузить все макеты">⟳ Перезагрузить</button>
+    <button class="tb" id="btn-open-dir" title="Открыть папку с кодом">📂 Код</button>
+    <button class="tb" id="btn-state" title="Показать файл состояния">💾 Данные</button>
+    <button class="tb" id="btn-devtools" title="DevTools">🛠</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="panel left">
+    <div class="panel-head"><b>Устройства</b><span id="dev-count"></span></div>
+    <div class="panel-body">
+      <div class="seg" id="mode-seg">
+        <button data-mode="grid" class="on">Все сразу</button>
+        <button data-mode="single">Один крупный</button>
+      </div>
+      <div class="hint">Отметь устройства, которые показывать. Все кадры — одно приложение: действие в одном отражается в остальных.</div>
+      <div id="device-list" class="device-list"></div>
+
+      <div class="panel-head" style="margin-top:16px"><b>Вид</b></div>
+      <label class="ctl"><span>Масштаб</span><input type="range" id="zoom" min="0.25" max="1.4" step="0.05" value="0.42"><output id="zoom-out">0.42</output></label>
+      <label class="ctl"><span>Поворот</span><input type="checkbox" id="rotate"></label>
+      <label class="ctl"><span>Рамка устройства</span><input type="checkbox" id="frame" checked></label>
+      <label class="ctl"><span>Тема</span><select id="theme-select"><option value="dark">Тёмная</option><option value="light">Светлая</option></select></label>
+      <label class="ctl"><span>Status bar</span><input type="checkbox" id="statusbar" checked></label>
+      <div class="hint">Dynamic Island / notch / home indicator рисуются автоматически под каждую модель.</div>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="stage-empty" id="stage-empty">Выбери хотя бы одно устройство слева</div>
+    <div class="devices" id="devices"></div>
+  </main>
+
+  <aside class="panel right">
+    <div class="panel-head"><b>Визуальный редактор</b></div>
+    <div class="panel-body">
+      <div class="tabs" id="tabs">
+        <button data-tab="theme" class="on">Тема</button>
+        <button data-tab="inspect">Инспектор</button>
+        <button data-tab="log">Журнал</button>
+      </div>
+
+      <div id="tab-theme" class="tabpane">
+        <div class="hint">Меняется мгновенно во всех макетах и сохраняется на диск.</div>
+        <label class="ctl"><span>Акцент</span><input type="color" id="t-accent" value="#FC995C"></label>
+        <label class="ctl"><span>Акцент 2</span><input type="color" id="t-accent2" value="#ED59A1"></label>
+        <label class="ctl"><span>Фон</span><input type="color" id="t-bg" value="#0B0B14"></label>
+        <label class="ctl"><span>Панели</span><input type="color" id="t-panel" value="#242421"></label>
+        <label class="ctl"><span>Радиус</span><input type="range" id="t-radius" min="0" max="40" step="1" value="22"><output id="o-radius">22</output></label>
+        <label class="ctl"><span>Размер шрифта</span><input type="range" id="t-font" min="0.8" max="1.35" step="0.05" value="1"><output id="o-font">1.00</output></label>
+        <label class="ctl"><span>Плотность</span><input type="range" id="t-density" min="0.7" max="1.4" step="0.05" value="1"><output id="o-density">1.00</output></label>
+        <label class="ctl"><span>Стекло / размытие</span><input type="range" id="t-glass" min="0" max="1" step="0.05" value="1"><output id="o-glass">1.00</output></label>
+        <label class="ctl"><span>Светлая тема</span><input type="checkbox" id="t-dark"></label>
+        <div class="preset-row">
+          <button class="mini" data-preset="default">По умолчанию</button>
+          <button class="mini" data-preset="ocean">Океан</button>
+          <button class="mini" data-preset="mono">Моно</button>
+          <button class="mini" data-preset="candy">Карамель</button>
+        </div>
+      </div>
+
+      <div id="tab-inspect" class="tabpane hidden">
+        <div class="hint">Включи инспектор и кликни по любому элементу внутри макета. Правки применяются ко всем кадрам и сохраняются.</div>
+        <button class="btn wide" id="inspect-toggle">🔍 Включить инспектор</button>
+        <div id="inspect-empty" class="hint" style="margin-top:10px">Элемент не выбран.</div>
+        <div id="inspect-fields" class="hidden">
+          <div class="selector-box" id="inspect-sel"></div>
+          <label class="ctl"><span>Текст</span><input type="text" id="i-text"></label>
+          <label class="ctl"><span>Цвет текста</span><input type="color" id="i-color"></label>
+          <label class="ctl"><span>Фон</span><input type="color" id="i-bg"></label>
+          <label class="ctl"><span>Размер шрифта</span><input type="range" id="i-size" min="8" max="34" step="1"><output id="o-size"></output></label>
+          <label class="ctl"><span>Скругление</span><input type="range" id="i-radius" min="0" max="40" step="1"><output id="o-iradius"></output></label>
+          <label class="ctl"><span>Отступ</span><input type="range" id="i-pad" min="0" max="32" step="1"><output id="o-pad"></output></label>
+          <label class="ctl"><span>Прозрачность</span><input type="range" id="i-opacity" min="0.1" max="1" step="0.05"><output id="o-opacity"></output></label>
+          <div class="preset-row"><button class="mini" id="i-reset">Сбросить элемент</button><button class="mini" id="i-reset-all">Сбросить всё</button></div>
+        </div>
+        <div class="panel-head" style="margin-top:14px"><b>Свой CSS</b></div>
+        <textarea id="custom-css" rows="5" placeholder=".msg { border-width: 2px; }"></textarea>
+        <button class="btn wide" id="apply-css" style="margin-top:6px">Применить CSS</button>
+        <div class="hint">CSS injectится во все кадры и переживает перезагрузку (хранится в состоянии).</div>
+      </div>
+
+      <div id="tab-log" class="tabpane hidden">
+        <div class="hint">Сюда падают изменения файлов. Как только я правлю код — макеты обновляются сами.</div>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<footer class="footer">
+  <span id="foot-info">инициализация…</span>
+  <span>Правки кода → автоматическое обновление · состояние: <code id="foot-state"></code></span>
+</footer>
+
+<script src="/shell.js"></script>
+</body>
+</html>

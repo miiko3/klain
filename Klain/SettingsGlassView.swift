@@ -26,10 +26,13 @@ struct SettingsScreen: View {
         [
             Row(title: "GitHub · miiko3", symbol: "chevron.left.forwardslash.chevron.right", tint: GlassPalette.accent, url: "https://github.com/miiko3", action: nil),
             Row(title: "Threads · @klain_app", symbol: "at", tint: GlassPalette.accent2, url: "https://www.threads.com/@klain_app", action: nil),
-            Row(title: "Telegram · @yetilov", symbol: "paperplane.fill", tint: GlassPalette.cyan, url: "https://t.me/yetilov", action: nil),
-            Row(title: "Boosty · поддержать", symbol: "heart.fill", tint: GlassPalette.mint, url: "https://boosty.to/miilo3", action: nil)
+            Row(title: "Telegram · @yetilov", symbol: "paperplane", tint: GlassPalette.cyan, url: "https://t.me/yetilov", action: nil),
+            Row(title: "Boosty · поддержать", symbol: "heart", tint: GlassPalette.mint, url: "https://boosty.to/miilo3", action: nil)
         ]
     }
+
+    @AppStorage(KlainTheme.storageKey) private var scheme: String = "dark"
+    @AppStorage("klain.uiScale") private var uiScale: String = "normal"
 
     var body: some View {
         ZStack {
@@ -38,6 +41,18 @@ struct SettingsScreen: View {
                 VStack(alignment: .leading, spacing: 16) {
                     card(title: "НАСТРОЙКИ", tint: GlassPalette.accent) {
                         VStack(spacing: 10) {
+                            Picker("Тема", selection: $scheme) {
+                                Text("Чёрная").tag("dark")
+                                Text("Белая").tag("light")
+                            }
+                            .pickerStyle(.segmented)
+                            Picker("Масштаб", selection: $uiScale) {
+                                Text("Маленький").tag("small")
+                                Text("Обычный").tag("normal")
+                                Text("Крупный").tag("large")
+                                Text("Очень крупный").tag("xlarge")
+                            }
+                            .pickerStyle(.segmented)
                             ForEach(settingsRows) { row in
                                 SettingsRowView(row: row)
                             }
@@ -118,10 +133,6 @@ private struct SettingsRowView: View {
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
-        }
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

@@ -96,7 +96,7 @@ struct ImageStudioView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Circle()
-                    .fill(store.providers.isEmpty ? Color.orange : GlassPalette.mint)
+                    .fill(store.providers.isEmpty ? Color.secondary : GlassPalette.mint)
                     .frame(width: 7, height: 7)
                 Text(store.providers.isEmpty ? "API не настроен" : "API подключён")
                     .font(.caption2.weight(.semibold))
@@ -169,7 +169,7 @@ struct ImageStudioView: View {
                     Text(item.model)
                         .font(.system(size: 8, weight: .semibold, design: .monospaced))
                         .lineLimit(1)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(.black.opacity(0.35), in: Capsule())
@@ -209,7 +209,7 @@ struct ImageStudioView: View {
                         .overlay(alignment: .topTrailing) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .padding(6)
                                 .background(.black.opacity(0.35), in: Circle())
                                 .padding(8)
@@ -274,7 +274,7 @@ struct ImageStudioView: View {
                         .buttonStyle(GlassButtonStyle(prominent: true))
                 } else if store.isGeneratingImage {
                     Button { store.cancelImageGeneration() } label: {
-                        Label("Отменить", systemImage: "stop.fill")
+                        Label("Отменить", systemImage: "stop")
                     }
                     .buttonStyle(GlassButtonStyle())
                 } else {
@@ -288,7 +288,7 @@ struct ImageStudioView: View {
             }
         }
         .padding(14)
-        .glassSurface(radius: 26)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         .padding(.horizontal, 12)
         .padding(.bottom, 10)
         .padding(.top, 6)
@@ -375,7 +375,7 @@ struct ImagePreviewSheet: View {
                         }
                     }
                 } else {
-                    Text("Не удалось открыть изображение").foregroundStyle(.white)
+                    Text("Не удалось открыть изображение").foregroundStyle(.primary)
                 }
             }
             .navigationTitle(image.model)

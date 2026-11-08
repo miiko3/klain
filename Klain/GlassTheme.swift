@@ -1,49 +1,48 @@
 import SwiftUI
 import Combine
 
+// Monochrome palette. Every former accent hue maps to primary/gray so the
+// whole app renders black-and-white in both color schemes without touching
+// each call site. Gradients become subtle gray washes, never colored.
 enum GlassPalette {
-    static let accent = Color(red: 0.99, green: 0.60, blue: 0.36)
-    static let accent2 = Color(red: 0.93, green: 0.35, blue: 0.63)
-    static let violet = Color(red: 0.48, green: 0.38, blue: 0.99)
-    static let cyan = Color(red: 0.22, green: 0.74, blue: 0.94)
-    static let mint = Color(red: 0.36, green: 0.88, blue: 0.72)
+    static let accent = Color.primary
+    static let accent2 = Color.secondary
+    static let violet = Color.secondary
+    static let cyan = Color.primary
+    static let mint = Color.secondary
 
     static var accentGradient: LinearGradient {
-        LinearGradient(colors: [accent, accent2], startPoint: .topLeading, endPoint: .bottomTrailing)
+        LinearGradient(colors: [Color.primary, Color.secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
     static var coolGradient: LinearGradient {
-        LinearGradient(colors: [violet, cyan], startPoint: .topLeading, endPoint: .bottomTrailing)
+        LinearGradient(colors: [Color.secondary.opacity(0.6), Color.primary.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 
-// MARK: - Liquid background (iOS 26/27: layered, animated, adaptive)
+// MARK: - Ambient background: monochrome, subtle, real dark/light themes
 struct LiquidBackground: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var drift = false
-    @State private var phase: CGFloat = 0
 
     var body: some View {
         ZStack {
-            (colorScheme == .dark
-                ? Color(red: 0.045, green: 0.045, blue: 0.08)
-                : Color(red: 0.96, green: 0.96, blue: 0.99))
+            (colorScheme == .dark ? Color.black : Color.white)
 
             LinearGradient(
                 colors: [
-                    GlassPalette.accent.opacity(colorScheme == .dark ? 0.20 : 0.16),
-                    GlassPalette.violet.opacity(colorScheme == .dark ? 0.26 : 0.15),
-                    GlassPalette.cyan.opacity(colorScheme == .dark ? 0.16 : 0.12)
+                    Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.03),
+                    Color.primary.opacity(colorScheme == .dark ? 0.02 : 0.015)
                 ], startPoint: .topLeading, endPoint: .bottomTrailing)
 
-            Circle().fill(GlassPalette.accent.opacity(colorScheme == .dark ? 0.30 : 0.20))
-                .frame(width: 330, height: 330).blur(radius: 100)
+            Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04))
+                .frame(width: 330, height: 330).blur(radius: 110)
                 .offset(x: drift ? 140 : -150, y: drift ? -270 : -170)
-            Circle().fill(GlassPalette.violet.opacity(colorScheme == .dark ? 0.34 : 0.22))
-                .frame(width: 300, height: 300).blur(radius: 110)
+            Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.035))
+                .frame(width: 300, height: 300).blur(radius: 120)
                 .offset(x: drift ? -160 : 150, y: drift ? 280 : 210)
-            Circle().fill(GlassPalette.cyan.opacity(colorScheme == .dark ? 0.22 : 0.16))
-                .frame(width: 250, height: 250).blur(radius: 95)
+            Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.03))
+                .frame(width: 250, height: 250).blur(radius: 100)
                 .offset(x: drift ? 50 : -70, y: drift ? 60 : -40)
         }
         .ignoresSafeArea()
@@ -54,7 +53,8 @@ struct LiquidBackground: View {
     }
 }
 
-// MARK: - Liquid Glass surface (iOS 26/27 look on every supported OS)
+// MARK: - Glass surface: pure blur + translucent material only.
+// No borders, no specular rims, no shadows, no gradient tint overlays.
 struct GlassSurface: ViewModifier {
     @ScaledMetric(relativeTo: .body) var radius: CGFloat = 22
     var tint: Color = .clear
@@ -65,28 +65,7 @@ struct GlassSurface: ViewModifier {
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .overlay {
-                        // Adaptive tint sampled from the ambient accent, not a flat wash.
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(LinearGradient(colors: [tint == .clear ? GlassPalette.accent.opacity(0.06) : tint.opacity(0.16),
-                                                         GlassPalette.violet.opacity(0.05)],
-                                                startPoint: .topLeading, endPoint: .bottomTrailing))
-                    }
-                    // Specular rim: light catching edges + inner caustic.
-                    .overlay {
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .strokeBorder(
-                                LinearGradient(colors: [.white.opacity(0.72), .white.opacity(0.06),
-                                                        .white.opacity(0.30), .white.opacity(0.62)],
-                                               startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                    }
-                    .overlay(alignment: .top) {
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(.white.opacity(0.18)).frame(height: 1).padding(.horizontal, radius / 2)
-                    }
             }
-            .shadow(color: .black.opacity(0.16), radius: 22, x: 0, y: 11)
-            .shadow(color: GlassPalette.accent.opacity(0.06), radius: 18, x: 0, y: 6)
             .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 }
@@ -96,10 +75,7 @@ extension View {
     func glassSurface(radius: CGFloat = 22, tint: Color = .clear) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
-            self
-                .glassEffect(.regular.tint(tint == .clear ? GlassPalette.accent.opacity(0.06) : tint.opacity(0.20)).interactive(),
-                             in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-                .shadow(color: .black.opacity(0.14), radius: 20, x: 0, y: 10)
+            self.glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         } else {
             self.modifier(GlassSurface(radius: radius, tint: tint))
         }
@@ -112,7 +88,7 @@ extension View {
     func glassCapsule(tint: Color = .clear) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.tint(tint == .clear ? .clear : tint.opacity(0.20)).interactive(), in: Capsule())
+            self.glassEffect(.regular.interactive(), in: Capsule())
         } else {
             glassCapsuleFallback()
         }
@@ -123,10 +99,6 @@ extension View {
 
     func glassCapsuleFallback() -> some View {
         self.background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.55), .white.opacity(0.10), .white.opacity(0.35)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-            .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
     }
 }
 
@@ -138,19 +110,13 @@ struct GlassButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.body, design: .rounded).weight(.semibold))
-            .foregroundStyle(prominent ? Color.black : Color.primary)
+            .foregroundStyle(Color.primary)
             .padding(.horizontal, hPad).padding(.vertical, vPad)
             .frame(maxWidth: prominent ? .infinity : nil)
             .background {
-                if prominent { Capsule().fill(GlassPalette.accentGradient) }
+                if prominent { Capsule().fill(Color.primary.opacity(0.16)) }
                 else { Capsule().fill(.ultraThinMaterial) }
             }
-            .overlay {
-                Capsule().strokeBorder(
-                    LinearGradient(colors: [.white.opacity(prominent ? 0.45 : 0.55), .white.opacity(0.08), .white.opacity(0.35)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-            }
-            .shadow(color: GlassPalette.accent.opacity(prominent ? 0.34 : 0), radius: 16, x: 0, y: 8)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.28, dampingFraction: 0.72), value: configuration.isPressed)
     }
@@ -163,7 +129,7 @@ struct GlassIconButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.body, design: .rounded).weight(.semibold))
-            .foregroundStyle(tint)
+            .foregroundStyle(.primary)
             .frame(width: size, height: size)
             .glassCapsule(tint: tint)
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
@@ -179,7 +145,7 @@ struct TypingDots: View {
     var body: some View {
         HStack(spacing: 5) {
             ForEach(0..<3, id: \.self) { index in
-                Circle().fill(Palette.accent).frame(width: dot, height: dot)
+                Circle().fill(Color.primary).frame(width: dot, height: dot)
                     .opacity(phase == index ? 1 : 0.25)
                     .scaleEffect(phase == index ? 1.15 : 0.85)
             }
@@ -194,8 +160,8 @@ struct VisionBadge: View {
     var body: some View {
         Label(compact ? "фото" : "видит фото", systemImage: "camera.viewfinder")
             .font(.system(.caption2, design: .rounded).weight(.bold))
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.primary)
             .padding(.horizontal, 7).padding(.vertical, 3)
-            .background(GlassPalette.coolGradient, in: Capsule())
+            .background(.ultraThinMaterial, in: Capsule())
     }
 }
