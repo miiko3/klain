@@ -221,6 +221,11 @@ struct ImageStudioView: View {
             TextField("Опиши изображение…", text: $prompt, axis: .vertical)
                 .lineLimit(2...6)
                 .focused($focused)
+                // Hide the editor during generation: the request is shown once,
+                // inside generatingRow, so it never appears twice on screen.
+                .opacity(store.isGeneratingImage ? 0 : 1)
+                .frame(maxHeight: store.isGeneratingImage ? 0 : nil)
+                .disabled(store.isGeneratingImage)
 
             if !store.providers.isEmpty {
                 HStack(spacing: 8) {
@@ -291,14 +296,16 @@ struct ImageStudioView: View {
     }
 
     private var generatingRow: some View {
-        HStack(spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             ProgressView().tint(Palette.accent).scaleEffect(0.85)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Генерирую…")
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                Text("Обычно 10–60 секунд")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Генерирую…").font(.system(.subheadline, design: .rounded).weight(.semibold))
+                Text("Обычно 10–60 секунд").font(.caption2).foregroundStyle(.secondary)
+                if !store.currentImagePrompt.isEmpty {
+                    Text(store.currentImagePrompt)
+                        .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                        .padding(6).background(.black.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
             }
             Spacer()
         }

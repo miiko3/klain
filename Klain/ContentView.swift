@@ -9,6 +9,11 @@ enum Palette {
     static let accent = Color(red: 0.82, green: 0.48, blue: 0.35)
 }
 
+private struct ChatBottomPrefKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
 enum Route: Hashable {
     case chats, images, settings, chat(UUID)
 }
@@ -16,6 +21,7 @@ enum Route: Hashable {
 struct ContentView: View {
     @EnvironmentObject var store: ChatStore
     @State private var input = ""
+    @State private var followTail = true
     @State private var settings = false
     @State private var stats = false
     @State private var importing = false
@@ -256,10 +262,31 @@ struct ContentView: View {
                         }
                         .padding(.horizontal, 18)
                         .padding(.vertical, 14)
+                        .background(GeometryReader { geo in
+                            Color.clear.preference(key: ChatBottomPrefKey.self,
+                                value: geo.frame(in: .named("chatScroll")).maxY)
+                        })
                     }
+                    .coordinateSpace(name: "chatScroll")
                     .scrollDismissesKeyboard(.interactively)
-                    .onChange(of: store.selectedChat?.messages.last?.text) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
-                    .onChange(of: store.selectedChatID) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
+                    // Follow the stream ONLY while the user is pinned to the bottom.
+                    // A manual scroll-up disables auto-follow so the chat no longer
+                    // yanks back on every token.
+                    .onPreferenceChange(ChatBottomPrefKey.self) { _ in
+                        if followTail, store.isSending {
+                            DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.12)) { proxy.scrollTo("bottom", anchor: .bottom) } }
+                        }
+                    }
+                    .simultaneousGesture(DragGesture().onChanged { _ in followTail = false })
+                    .onChange(of: store.selectedChatID) { _, _ in followTail = true; proxy.scrollTo("bottom", anchor: .bottom) }
+                    .safeAreaInset(edge: .bottom) {
+                        if !followTail {
+                            Button { followTail = true; withAnimation { proxy.scrollTo("bottom", anchor: .bottom) } } label: {
+                                Label("К последнему сообщению", systemImage: "chevron.down")
+                                    .font(.caption).padding(9).glassCapsule()
+                            }.padding(.bottom, 6)
+                        }
+                    }
                 }
                 composer
             }
