@@ -39,7 +39,7 @@ struct ContentView: View {
                     }
                 }
         }
-        .preferredColorScheme(.dark).tint(Palette.accent)
+        .preferredColorScheme(.dark).tint(GlassPalette.accent)
         .confirmationDialog("Удалить чат?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             Button("Удалить навсегда", role: .destructive) { if let id = deleting { store.deleteChat(id) }; deleting = nil }
             Button("Отмена", role: .cancel) { deleting = nil }
@@ -98,37 +98,53 @@ struct ContentView: View {
     private var home: some View {
         ZStack {
             LiquidBackground()
-            List {
-                Section {
-                    HomeBanner().listRowBackground(Color.clear).listRowSeparator(.hidden)
+            ScrollView {
+                VStack(spacing: 14) {
+                    HomeBanner()
+                    SigningReminder()
                 }
-                Section {
-                    SigningReminder().listRowBackground(Color.clear).listRowSeparator(.hidden)
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 140)
             }
-            .scrollContentBackground(.hidden)
         }
         .navigationTitle("klain")
         .safeAreaInset(edge: .bottom) { homeMenu }
     }
     private var homeMenu: some View {
-        HStack(spacing: 8) {
-            menuButton("Чаты", icon: "bubble.left.and.bubble.right.fill", action: { path.append(.chats) })
-            menuButton("Картинки", icon: "sparkles", action: { path.append(.images) })
-            menuButton("Настройки", icon: "slider.horizontal.3", action: { path.append(.settings) })
+        HStack(spacing: 6) {
+            menuButton("Чаты", icon: "bubble.left.and.bubble.right.fill", tint: GlassPalette.accent, action: { path.append(.chats) })
+            menuButton("Картинки", icon: "sparkles", tint: GlassPalette.accent2, action: { path.append(.images) })
+            menuButton("Настройки", icon: "slider.horizontal.3", tint: GlassPalette.cyan, action: { path.append(.settings) })
         }
-        .padding(8)
-        .glassSurface(radius: 26)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 24)
+        .padding(7)
+        .glassSurface(radius: 30)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 22)
     }
-    private func menuButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func menuButton(_ title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 7) {
-                Image(systemName: icon).font(.system(size: 24, weight: .medium))
-                Text(title).font(.system(size: 17, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
-            }.frame(maxWidth: .infinity, minHeight: 62).contentShape(Rectangle())
-        }.buttonStyle(.borderless).foregroundStyle(Palette.accent)
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 42, height: 42)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .overlay(Circle().fill(tint.opacity(0.20)))
+                    )
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
     private var chatsList: some View {
         ZStack {
@@ -195,25 +211,7 @@ struct ContentView: View {
         .glassSurface(radius: 22)
     }
     private var settingsList: some View {
-        ZStack {
-            LiquidBackground()
-            List {
-                Section("НАСТРОЙКИ") {
-                    Button { settings = true } label: { Label("Провайдеры", systemImage: "slider.horizontal.3") }
-                    Button { stats = true } label: { Label("Статистика", systemImage: "chart.bar") }
-                    Button { path.append(.images) } label: { Label("Картинки", systemImage: "sparkles") }
-                }
-                Section("АВТОР") {
-                    Link(destination: URL(string: "https://github.com/miiko3")!) { Label("GitHub · miiko3", systemImage: "chevron.left.forwardslash.chevron.right") }
-                    Link(destination: URL(string: "https://www.threads.com/@klain_app")!) { Label("Threads · @klain_app", systemImage: "at") }
-                    Link(destination: URL(string: "https://t.me/yetilov")!) { Label("Telegram · @yetilov", systemImage: "paperplane") }
-                    Link(destination: URL(string: "https://boosty.to/miilo3")!) { Label("Boosty · поддержать", systemImage: "heart") }
-                }
-                Section { Text("klain — песочница для запросов к ИИ по твоим API-ключам. Генерация изображений доступна, если её поддерживает провайдер и выбранная модель.").font(.caption).foregroundStyle(.secondary) }
-            }
-            .scrollContentBackground(.hidden)
-        }
-        .navigationTitle("Настройки").navigationBarTitleDisplayMode(.inline)
+        SettingsScreen(openImages: { path.append(.images) })
     }
     private var chatDetail: some View {
         ZStack {
@@ -511,7 +509,7 @@ struct MessageView: View {
                 systemImage: isUser ? "person.fill" : "sparkle"
             )
             .font(.system(size: 10, weight: .semibold, design: .rounded))
-            .foregroundStyle(isUser ? Palette.accent : GlassPalette.cyan)
+            .foregroundStyle(isUser ? GlassPalette.accent : GlassPalette.cyan)
 
             if message.role == "assistant" && (waiting || message.thinking != nil) {
                 DisclosureGroup {
@@ -566,6 +564,6 @@ struct MessageView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(radius: 20, tint: isUser ? Palette.accent : .clear)
+        .glassSurface(radius: 22, tint: isUser ? GlassPalette.accent : GlassPalette.violet)
     }
 }

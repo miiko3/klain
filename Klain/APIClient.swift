@@ -121,6 +121,17 @@ struct APIClient {
         }
         throw failure("Провайдер не вернул изображение.")
     }
+    private func applyAnthropic(_ u: [String: Any], to usage: inout Usage) {
+        if let input = u["input_tokens"] as? Int {
+            usage.input = input + (u["cache_read_input_tokens"] as? Int ?? 0) + (u["cache_creation_input_tokens"] as? Int ?? 0)
+        }
+        if let output = u["output_tokens"] as? Int {
+            usage.output = output
+        }
+        if let cached = u["cache_read_input_tokens"] as? Int {
+            usage.cached = cached
+        }
+    }
     func stream(chat: Chat, provider: Provider) -> AsyncThrowingStream<APIEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
@@ -206,10 +217,10 @@ struct APIClient {
                             if let delta = json["delta"] as? [String: Any], let text = delta["thinking"] as? String { continuation.yield(.thinking(text)) }
                             if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String { continuation.yield(.text(text)) }
                             let start = (json["message"] as? [String: Any])?["usage"] as? [String: Any]
-                            if let u = start ?? json["usage"] as? [String: Any] {
-                                if let input = u["input_tokens"] as? Int { usage.input = input + (u["cache_read_input_tokens"] as? Int ?? 0) + (u["cache_creation_input_tokens"] as? Int ?? 0) }
-                                if let output = u["output_tokens"] as? Int { usage.output = output }
-                                if let cached = u["cache_read_input_tokens"] as? Int { usage.cached = cached }
+                            let deltaUsage = (json["delta"] as? [String: Any])?["usage"] as? [String: Any]
+                            let candidates = [start, deltaUsage, json["usage"] as? [String: Any]].compactMap { $0 }
+                            for u in candidates { applyAnthropic(u, to: &usage) }
+                            if !candidates.isEmpty, usage.input != nil || usage.output != nil {
                                 continuation.yield(.usage(usage))
                             }
                         } else {
@@ -223,14 +234,22 @@ struct APIClient {
                                     if let video = part["video_url"] as? [String: Any], let url = video["url"] as? String { continuation.yield(.media(GeneratedMedia(url: url, kind: "video"))) }
                                 }
                             }
-                            if let u = json["usage"] as? [String: Any] {
-                                usage.input = u["prompt_tokens"] as? Int ?? usage.input
-                                usage.output = u["completion_tokens"] as? Int ?? usage.output
-                                usage.cached = (u["prompt_tokens_details"] as? [String: Any])?["cached_tokens"] as? Int ?? usage.cached
+                            if let u = json["usage"] as? [String: Any], !u.isEmpty {
+                                usage.input = u["prompt_tokens"] as? Int ?? u["input_tokens"] as? Int ?? usage.input
+                                usage.output = u["completion_tokens"] as? Int ?? u["output_tokens"] as? Int ?? usage.output
+                                usage.cached = (u["prompt_tokens_details"] as? [String: Any])?["cached_tokens"] as? Int ?? u["cache_read_input_tokens"] as? Int ?? usage.cached
                                 usage.cost = u["cost"] as? Double ?? usage.cost
                                 continuation.yield(.usage(usage))
                             }
+                            if let u = json["x_groq"] as? [String: Any], let gu = u["usage"] as? [String: Any] {
+                                usage.input = gu["prompt_tokens"] as? Int ?? usage.input
+                                usage.output = gu["completion_tokens"] as? Int ?? usage.output
+                                continuation.yield(.usage(usage))
+                            }
                         }
+                    }
+                    if usage.input != nil || usage.output != nil {
+                        continuation.yield(.usage(usage))
                     }
                     continuation.finish()
                 } catch { continuation.finish(throwing: error) }

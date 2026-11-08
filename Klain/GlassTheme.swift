@@ -85,17 +85,17 @@ struct GlassSurface: ViewModifier {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.50),
-                                Color.white.opacity(0.04),
-                                Color.white.opacity(0.24)
+                                Color.white.opacity(0.42),
+                                Color.white.opacity(0.10),
+                                Color.white.opacity(0.20)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1
+                        lineWidth: 0.8
                     )
             }
-            .shadow(color: .black.opacity(0.16), radius: 22, x: 0, y: 11)
+            .shadow(color: .black.opacity(0.06), radius: 14, x: 0, y: 6)
     }
 }
 
@@ -109,7 +109,7 @@ extension View {
                     .regular.tint(tint.opacity(0.20)),
                     in: RoundedRectangle(cornerRadius: radius, style: .continuous)
                 )
-                .shadow(color: .black.opacity(0.14), radius: 20, x: 0, y: 10)
+                .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 5)
         } else {
             self.modifier(GlassSurface(radius: radius, tint: tint))
         }
@@ -134,7 +134,7 @@ extension View {
     func glassCapsuleFallback() -> some View {
         self
             .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.30), lineWidth: 1))
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.22), lineWidth: 0.8))
     }
 }
 

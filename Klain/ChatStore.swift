@@ -166,6 +166,7 @@ import UIKit
         var requestChat = chats[index]; requestChat.messages.removeLast()
         let messageIndex = chats[index].messages.count - 1
         var reported: Usage?
+        var failed = false
         do {
             for try await event in api.stream(chat: requestChat, provider: provider) {
                 switch event {
@@ -174,15 +175,26 @@ import UIKit
                     if chats[index].messages[messageIndex].media == nil { chats[index].messages[messageIndex].media = [] }
                     if chats[index].messages[messageIndex].media?.contains(media) != true { chats[index].messages[messageIndex].media?.append(media) }
                 case .text(let text): chats[index].messages[messageIndex].text += text
-                case .usage(let usage): reported = usage; chats[index].messages[messageIndex].usage = usage
+                case .usage(let usage):
+                    reported = usage
+                    chats[index].messages[messageIndex].usage = usage
                 case .remaining(let value): remaining[provider.id] = value + "\nОбновлено: \(Date().formatted())"
                 }
             }
         } catch {
+            failed = true
             chats[index].messages[messageIndex].failed = true
             chats[index].messages[messageIndex].text += Task.isCancelled ? "\n[Остановлено]" : "\nОшибка: \(friendlyError(error))"
         }
-        if let usage = reported { records.append(UsageRecord(chatID: requestChat.id, chatTitle: requestChat.title, providerID: provider.id, providerName: provider.name, model: requestChat.model, usage: usage)) }
+        if !failed {
+            let title = chats[index].title
+            let record = UsageRecord(chatID: requestChat.id, chatTitle: title, providerID: provider.id, providerName: provider.name, model: requestChat.model, usage: reported ?? Usage())
+            if let existing = records.firstIndex(where: { $0.id == record.id }) {
+                records[existing] = record
+            } else {
+                records.append(record)
+            }
+        }
     }
     private func friendlyError(_ error: Error) -> String {
         if let urlError = error as? URLError {
