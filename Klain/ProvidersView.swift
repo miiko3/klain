@@ -180,121 +180,15 @@ struct ProviderEditor: View {
                 LiquidBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
-                        editorCard(title: "ПОДКЛЮЧЕНИЕ", tint: GlassPalette.accent) {
-                            fieldBox {
-                                VStack(spacing: 0) {
-                                    TextField("ID провайдера", text: $slug)
-                                        .padding(12)
-                                    Divider().opacity(0.25)
-                                    TextField("Отображаемое имя", text: $provider.name)
-                                        .padding(12)
-                                    Divider().opacity(0.25)
-                                    TextField("Базовый URL", text: $provider.baseURL)
-                                        .keyboardType(.URL)
-                                        .padding(12)
-                                    Divider().opacity(0.25)
-                                    SecureField("Ключ API (необязательно)", text: $provider.apiKey)
-                                        .padding(12)
-                                }
-                            }
-                            Text("Для своего шлюза можно оставить ключ пустым и задать авторизацию через заголовки.")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        editorCard(title: "МОДЕЛИ", tint: GlassPalette.violet) {
-                            Button {
-                                loadModels()
-                            } label: {
-                                HStack(spacing: 8) {
-                                    if loading { ProgressView().scaleEffect(0.8) }
-                                    Image(systemName: "arrow.clockwise")
-                                    Text(loading ? "Загружаю…" : "Загрузить модели из API")
-                                }
-                            }
-                            .buttonStyle(GlassButtonStyle())
-                            .disabled(loading)
-
-                            fieldBox {
-                                TextField("Фильтр моделей", text: $query)
-                                    .padding(12)
-                            }
-
-                            if models.contains(where: { $0.supportsVision == true }) {
-                                Text("Модели с отметкой «видит фото» принимают изображения.")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            ForEach(models.indices.filter { query.isEmpty || models[$0].id.localizedCaseInsensitiveContains(query) || models[$0].name.localizedCaseInsensitiveContains(query) }, id: \.self) { index in
-                                HStack(spacing: 10) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        TextField("model-id", text: $models[index].id)
-                                            .font(.system(.caption, design: .monospaced))
-                                        TextField("Отображаемое имя", text: $models[index].name)
-                                            .font(.system(size: 10, design: .rounded))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer(minLength: 4)
-                                    if models[index].supportsVision == true {
-                                        VisionBadge()
-                                    } else if models[index].supportsVision == false {
-                                        Text("текст")
-                                            .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                            .foregroundStyle(.secondary)
-                                            .padding(.horizontal, 7)
-                                            .padding(.vertical, 3)
-                                            .background(Color.white.opacity(0.08), in: Capsule())
-                                    }
-                                    Button { models.remove(at: index) } label: {
-                                        Image(systemName: "trash")
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundStyle(.red.opacity(0.85))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                                .padding(10)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            }
-
-                            Button { query = ""; models.append(ModelEntry(id: "", name: "")) } label: {
-                                Label("Добавить модель", systemImage: "plus")
-                            }
-                            .buttonStyle(GlassButtonStyle())
-                        }
-
-                        editorCard(title: "ЗАГОЛОВКИ", tint: GlassPalette.cyan) {
-                            ForEach($headers) { $h in
-                                HStack(spacing: 10) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        TextField("Header-Name", text: $h.name)
-                                            .font(.system(.caption, design: .monospaced))
-                                        SecureField("Значение", text: $h.value)
-                                            .font(.caption)
-                                    }
-                                    Button { headers.removeAll { $0.id == h.id } } label: {
-                                        Image(systemName: "trash")
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundStyle(.red.opacity(0.85))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                                .padding(10)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            }
-                            Button { headers.append(HeaderEntry()) } label: {
-                                Label("Добавить заголовок", systemImage: "plus")
-                            }
-                            .buttonStyle(GlassButtonStyle())
-                        }
-
+                        connectionSection
+                        modelsSection
+                        headersSection
                         Text(mediaNotice)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(16)
                             .glassSurface(radius: 22, tint: GlassPalette.accent2)
-
                         if !error.isEmpty {
                             Text(error)
                                 .font(.caption)
@@ -321,6 +215,144 @@ struct ProviderEditor: View {
             .alert("О генерации медиа", isPresented: $showMediaNotice) { Button("Понятно") { dismiss() } } message: { Text(mediaNotice) }
         }.preferredColorScheme(.dark).tint(GlassPalette.accent)
     }
+    private var connectionSection: some View {
+        editorCard(title: "ПОДКЛЮЧЕНИЕ", tint: GlassPalette.accent) {
+            fieldBox {
+                VStack(spacing: 0) {
+                    TextField("ID провайдера", text: $slug)
+                        .padding(12)
+                    Divider().opacity(0.25)
+                    TextField("Отображаемое имя", text: $provider.name)
+                        .padding(12)
+                    Divider().opacity(0.25)
+                    TextField("Базовый URL", text: $provider.baseURL)
+                        .keyboardType(.URL)
+                        .padding(12)
+                    Divider().opacity(0.25)
+                    SecureField("Ключ API (необязательно)", text: $provider.apiKey)
+                        .padding(12)
+                }
+            }
+            Text("Для своего шлюза можно оставить ключ пустым и задать авторизацию через заголовки.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var modelsSection: some View {
+        editorCard(title: "МОДЕЛИ", tint: GlassPalette.violet) {
+            Button(action: loadModels) {
+                HStack(spacing: 8) {
+                    if loading { ProgressView().scaleEffect(0.8) }
+                    Image(systemName: "arrow.clockwise")
+                    Text(loading ? "Загружаю…" : "Загрузить модели из API")
+                }
+            }
+            .buttonStyle(GlassButtonStyle())
+            .disabled(loading)
+
+            fieldBox {
+                TextField("Фильтр моделей", text: $query)
+                    .padding(12)
+            }
+
+            if models.contains(where: { $0.supportsVision == true }) {
+                Text("Модели с отметкой «видит фото» принимают изображения.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            ForEach(visibleModelIndexes, id: \.self) { index in
+                modelRow(index)
+            }
+
+            Button {
+                query = ""
+                models.append(ModelEntry(id: "", name: ""))
+            } label: {
+                Label("Добавить модель", systemImage: "plus")
+            }
+            .buttonStyle(GlassButtonStyle())
+        }
+    }
+
+    private var visibleModelIndexes: [Int] {
+        models.indices.filter { index in
+            if query.isEmpty { return true }
+            return models[index].id.localizedCaseInsensitiveContains(query)
+                || models[index].name.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private func modelRow(_ index: Int) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                TextField("model-id", text: $models[index].id)
+                    .font(.system(.caption, design: .monospaced))
+                TextField("Отображаемое имя", text: $models[index].name)
+                    .font(.system(size: 10, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            modelBadge(index)
+            Button { models.remove(at: index) } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.red.opacity(0.85))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func modelBadge(_ index: Int) -> some View {
+        if models[index].supportsVision == true {
+            VisionBadge()
+        } else if models[index].supportsVision == false {
+            Text("текст")
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Color.white.opacity(0.08), in: Capsule())
+        }
+    }
+
+    private var headersSection: some View {
+        editorCard(title: "ЗАГОЛОВКИ", tint: GlassPalette.cyan) {
+            ForEach($headers) { $h in
+                headerRow(h)
+            }
+            Button {
+                headers.append(HeaderEntry())
+            } label: {
+                Label("Добавить заголовок", systemImage: "plus")
+            }
+            .buttonStyle(GlassButtonStyle())
+        }
+    }
+
+    private func headerRow(_ header: Binding<HeaderEntry>) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                TextField("Header-Name", text: header.name)
+                    .font(.system(.caption, design: .monospaced))
+                SecureField("Значение", text: header.value)
+                    .font(.caption)
+            }
+            Button { headers.removeAll { $0.id == header.wrappedValue.id } } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.red.opacity(0.85))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
     private func editorCard<Content: View>(title: String, tint: Color, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
