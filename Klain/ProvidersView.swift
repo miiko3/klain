@@ -23,17 +23,6 @@ struct ProvidersView: View {
                 LiquidBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14 * AppScale.k) {
-                        // Title in a capsule block, matching the "Готово" button style.
-                        HStack {
-                            Text("Провайдеры")
-                                .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.primary)
-                                .padding(.horizontal, 14 * AppScale.k)
-                                .padding(.vertical, 7 * AppScale.k)
-                                .background(.ultraThinMaterial, in: Capsule())
-                            Spacer()
-                        }
-                        .padding(.top, 5 * AppScale.k)
                         card(title: "ЧЕРНОВИКИ", tint: GlassPalette.violet) {
                             if store.drafts.isEmpty {
                                 empty("Нет черновиков")
@@ -102,9 +91,22 @@ struct ProvidersView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Провайдеры")
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 16 * AppScale.k)
+                        .padding(.vertical, 8 * AppScale.k)
+                        .capsuleGlass()
+                        .padding(.top, 5 * AppScale.k)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
                         .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14 * AppScale.k)
+                        .padding(.vertical, 7 * AppScale.k)
+                        .capsuleGlass()
                 }
             }
             .sheet(item: $editing) { ProviderEditor(provider: $0) }
@@ -189,18 +191,6 @@ struct ProviderEditor: View {
                 LiquidBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14 * AppScale.k) {
-                        // Title in a capsule block (same style as navigation buttons).
-                        HStack {
-                            Text(provider.name.isEmpty ? "Новый провайдер" : provider.name)
-                                .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                                .padding(.horizontal, 14 * AppScale.k)
-                                .padding(.vertical, 7 * AppScale.k)
-                                .background(.ultraThinMaterial, in: Capsule())
-                            Spacer()
-                        }
-                        .padding(.top, 5 * AppScale.k)
                         connectionSection
                         modelsSection
                         headersSection
@@ -226,7 +216,32 @@ struct ProviderEditor: View {
             .autocorrectionDisabled()
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Назад") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Сохранить", action: save).disabled(loading || store.isSending) } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Назад") { dismiss() }
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14 * AppScale.k).padding(.vertical, 7 * AppScale.k)
+                        .capsuleGlass()
+                }
+                ToolbarItem(placement: .principal) {
+                    Text(provider.name.isEmpty ? "Новый провайдер" : provider.name)
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 16 * AppScale.k).padding(.vertical, 8 * AppScale.k)
+                        .capsuleGlass()
+                        .padding(.top, 5 * AppScale.k)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Сохранить", action: save)
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14 * AppScale.k).padding(.vertical, 7 * AppScale.k)
+                        .capsuleGlass()
+                        .disabled(loading || store.isSending)
+                }
+            }
             .onAppear { if !ready { if let draft = store.drafts.first(where: { $0.id == provider.id }) { provider = draft }; models = provider.models ?? []; headers = provider.headers ?? []; slug = provider.slug ?? "custom"; ready = true } }
             .onChange(of: provider) { _, _ in persistDraft() }
             .onChange(of: models) { _, _ in persistDraft() }

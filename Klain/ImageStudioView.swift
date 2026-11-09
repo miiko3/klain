@@ -43,18 +43,6 @@ struct ImageStudioView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14 * AppScale.k) {
-                        // Custom header: title in a capsule block, no blurred
-                        // navbar backplate, dropped 5px below the system bar.
-                        HStack {
-                            Text("Картинки")
-                                .font(.system(size: 17 * AppScale.k, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .padding(.horizontal, 14 * AppScale.k)
-                                .padding(.vertical, 7 * AppScale.k)
-                                .background(.ultraThinMaterial, in: Capsule())
-                            Spacer()
-                        }
-                        .padding(.top, 5 * AppScale.k)
                         hero
                         if !store.isGeneratingImage && store.generatedImages.isEmpty { emptyGallery }
                         card { gallery }
@@ -73,9 +61,26 @@ struct ImageStudioView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            // "Назад" stays system-provided (untouched).
+            ToolbarItem(placement: .principal) {
+                Text("Картинки")
+                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 16 * AppScale.k)
+                    .padding(.vertical, 8 * AppScale.k)
+                    .capsuleGlass()
+                    .padding(.top, 5 * AppScale.k)
+            }
             ToolbarItem(placement: .topBarTrailing) {
-                Button { settings = true } label: { Image(systemName: "slider.horizontal.3") }
-                    .accessibilityLabel("Провайдеры")
+                Button { settings = true } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14 * AppScale.k)
+                        .padding(.vertical, 7 * AppScale.k)
+                        .capsuleGlass()
+                }
+                .accessibilityLabel("Провайдеры")
             }
         }
         .sheet(isPresented: $settings) { ProvidersView() }
@@ -300,8 +305,8 @@ struct ImageStudioView: View {
             }
         }
         .padding(14 * AppScale.k)
-        // Restored 0.6.0 composer: one rounded translucent glass block.
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26 * AppScale.k, style: .continuous))
+        // One unified translucent capsule block (same as chat + home menu).
+        .capsuleGlass()
         .padding(.horizontal, 12 * AppScale.k)
         .padding(.bottom, 10 * AppScale.k)
         .padding(.top, 6 * AppScale.k)
@@ -391,14 +396,33 @@ struct ImagePreviewSheet: View {
                     Text("Не удалось открыть изображение").foregroundStyle(.primary)
                 }
             }
-            .navigationTitle(image.model)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Закрыть") { dismiss() } }
+                ToolbarItem(placement: .principal) {
+                    Text(image.model)
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 16 * AppScale.k)
+                        .padding(.vertical, 8 * AppScale.k)
+                        .capsuleGlass()
+                        .padding(.top, 5 * AppScale.k)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Закрыть") { dismiss() }
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14 * AppScale.k).padding(.vertical, 7 * AppScale.k)
+                        .capsuleGlass()
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button { Task { @MainActor in await save() } } label: {
                         Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 15 * AppScale.k, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .padding(10 * AppScale.k)
+                            .capsuleGlass()
                     }
                 }
             }

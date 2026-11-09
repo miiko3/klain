@@ -100,6 +100,22 @@ extension View {
     func glassCapsuleFallback() -> some View {
         self.background(.ultraThinMaterial, in: Capsule())
     }
+
+    // Unified translucent capsule from the reference design (photo 5):
+    // regularMaterial + blur, no border, no shadow, no opaque fill. Used by
+    // screen titles, control chips, the chat composer and the home menu alike.
+    func capsuleGlass() -> some View {
+        self.modifier(CapsuleGlass())
+    }
+}
+
+struct CapsuleGlass: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().fill(Color.primary.opacity(0.06)))
+            .contentShape(Capsule())
+    }
 }
 
 struct GlassButtonStyle: ButtonStyle {

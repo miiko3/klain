@@ -79,9 +79,19 @@ struct SettingsScreen: View {
                 .padding(.vertical, 16 * AppScale.k)
             }
         }
-        .navigationTitle("Настройки")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Настройки")
+                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 16 * AppScale.k)
+                    .padding(.vertical, 8 * AppScale.k)
+                    .capsuleGlass()
+                    .padding(.top, 5 * AppScale.k)
+            }
+        }
         .sheet(isPresented: $providers) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
     }

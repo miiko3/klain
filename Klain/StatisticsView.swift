@@ -83,13 +83,25 @@ struct StatisticsView: View {
                 }
                 .scrollIndicators(.hidden)
             }
-            .navigationTitle("Статистика")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Статистика")
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 16 * AppScale.k)
+                        .padding(.vertical, 8 * AppScale.k)
+                        .capsuleGlass()
+                        .padding(.top, 5 * AppScale.k)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
                         .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
+                        .padding(.horizontal, 14 * AppScale.k)
+                        .padding(.vertical, 7 * AppScale.k)
+                        .capsuleGlass()
                 }
             }
         }
@@ -211,7 +223,10 @@ struct StatisticsView: View {
             .font(.system(size: 14 * AppScale.k, weight: .semibold))
             .foregroundStyle(.primary)
             .frame(width: 30 * AppScale.k, height: 30 * AppScale.k)
-            .background(color.opacity(0.85), in: Circle())
+            // Translucent glass instead of an opaque white circle (fixes the
+            // white-on-white icon bug on the dark theme).
+            .background(.regularMaterial, in: Circle())
+            .overlay(Circle().fill(Color.primary.opacity(0.06)))
     }
 
     private func metric(title: String, value: String, icon: String, color: Color) -> some View {

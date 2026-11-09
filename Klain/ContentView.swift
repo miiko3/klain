@@ -115,7 +115,7 @@ struct ContentView: View {
             }
         }
         .toolbarBackground(.hidden, for: .navigationBar)
-        .navigationTitle("klain")
+        .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { homeMenu }
     }
     private var homeMenu: some View {
@@ -125,8 +125,8 @@ struct ContentView: View {
             menuButton("Настройки", icon: "slider.horizontal.3", action: { path.append(.settings) })
         }
         .padding(.vertical, 8 * AppScale.k)
-        // One unified, MAXIMALLY rounded (capsule) glass block.
-        .background(.ultraThinMaterial, in: Capsule())
+        // One unified translucent capsule block (same style everywhere).
+        .capsuleGlass()
         .padding(.horizontal, 16 * AppScale.k)
         .padding(.bottom, 22 * AppScale.k)
     }
@@ -165,9 +165,18 @@ struct ContentView: View {
             }
             .scrollContentBackground(.hidden)
         }
-        .navigationTitle("Чаты").navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Чаты")
+                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 16 * AppScale.k)
+                    .padding(.vertical, 8 * AppScale.k)
+                    .capsuleGlass()
+                    .padding(.top, 5 * AppScale.k)
+            }
             if !store.activeChats.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
@@ -253,7 +262,11 @@ struct ContentView: View {
                         if !followTail {
                             Button { followTail = true; withAnimation { proxy.scrollTo("bottom", anchor: .bottom) } } label: {
                                 Label("К последнему сообщению", systemImage: "chevron.down")
-                                    .font(.caption).padding(9 * AppScale.k).glassCapsule()
+                                    .font(.caption)
+                                    .foregroundStyle(.primary)
+                                    .padding(.horizontal, 14 * AppScale.k)
+                                    .padding(.vertical, 9 * AppScale.k)
+                                    .capsuleGlass()
                             }.padding(.bottom, 6 * AppScale.k)
                         }
                     }
@@ -261,15 +274,36 @@ struct ContentView: View {
                 composer
             }
         }
-        .navigationTitle(store.selectedChat?.title ?? "Новый чат")
         .navigationBarTitleDisplayMode(.inline)
         .background(BackTitleConfigurator())
-        // No opaque navbar backplate in chat; the composer keeps its own glass block.
+        // Title + toolbar buttons use one translucent capsule style, no backplate.
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(store.selectedChat?.title ?? "Новый чат")
+                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 16 * AppScale.k)
+                    .padding(.vertical, 8 * AppScale.k)
+                    .capsuleGlass()
+                    .padding(.top, 5 * AppScale.k)
+            }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("Статистика", systemImage: "chart.bar") { stats = true }
-                Button("Провайдеры", systemImage: "slider.horizontal.3") { settings = true }
+                Button { stats = true } label: {
+                    Image(systemName: "chart.bar")
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .padding(10 * AppScale.k)
+                        .capsuleGlass()
+                }.accessibilityLabel("Статистика")
+                Button { settings = true } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .padding(10 * AppScale.k)
+                        .capsuleGlass()
+                }.accessibilityLabel("Провайдеры")
             }
         }
     }
@@ -323,7 +357,7 @@ struct ContentView: View {
             }
             .font(.system(.caption, design: .monospaced))
             .padding(10 * AppScale.k)
-            .glassCapsule()
+            .capsuleGlass()
         }
         .disabled(store.isSending)
     }
@@ -339,7 +373,7 @@ struct ContentView: View {
                 Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
                     .font(.caption)
                     .padding(10 * AppScale.k)
-                    .glassCapsule()
+                    .capsuleGlass()
             }.disabled(store.isSending)
             Button {
                 store.setWebSearch(store.selectedChat?.webSearch != true)
@@ -348,7 +382,7 @@ struct ContentView: View {
                     .font(.caption)
                     .padding(10 * AppScale.k)
                     .background(store.selectedChat?.webSearch == true ? Color.primary.opacity(0.18) : Color.clear, in: Capsule())
-                    .glassCapsule()
+                    .capsuleGlass()
                     .foregroundStyle(.primary)
             }
                 .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
@@ -384,7 +418,7 @@ struct ContentView: View {
                         if UIImagePickerController.isSourceTypeAvailable(.camera) { camera = true } else { error = "Камера недоступна" }
                     }
                 } label: {
-                    Image(systemName: "paperclip").frame(width: 34 * AppScale.k, height: 34 * AppScale.k).glassCapsule()
+                    Image(systemName: "paperclip").frame(width: 34 * AppScale.k, height: 34 * AppScale.k).capsuleGlass()
                 }
                 Spacer()
                 if store.isSending {
@@ -423,8 +457,8 @@ struct ContentView: View {
             }
         }
         .padding(14 * AppScale.k)
-        // Restored 0.6.0 composer: single rounded translucent glass block.
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24 * AppScale.k, style: .continuous))
+        // One unified translucent capsule block (reference photo 5 style).
+        .capsuleGlass()
         .padding(12 * AppScale.k)
     }
     private func importFiles(_ result: Result<[URL], Error>) {
