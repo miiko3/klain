@@ -93,7 +93,6 @@ struct ProvidersView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
-                        .glassCapsule()
                 }
             }
             .sheet(item: $editing) { ProviderEditor(provider: $0) }
@@ -202,11 +201,9 @@ struct ProviderEditor: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Назад") { dismiss() }
-                        .glassCapsule()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Сохранить", action: save)
-                        .glassCapsule()
                         .disabled(loading || store.isSending)
                 }
             }

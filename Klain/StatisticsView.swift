@@ -89,7 +89,6 @@ struct StatisticsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
-                        .glassCapsule()
                 }
             }
         }

@@ -15,6 +15,7 @@ struct HomeBanner: View {
                     Image(systemName: "arrow.up.right").foregroundStyle(.secondary)
                 }
                 .padding(16 * AppScale.k)
+                .glassSurface(radius: 22 * AppScale.k)
             }
             .buttonStyle(.plain)
         }

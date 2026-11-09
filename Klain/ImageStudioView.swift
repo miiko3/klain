@@ -228,7 +228,6 @@ struct ImageStudioView: View {
                 // Floating glass input field (Telegram / iOS 26 style).
                 .padding(.horizontal, 16 * AppScale.k)
                 .padding(.vertical, 11 * AppScale.k)
-                .glassCapsule()
                 // Hide the editor during generation: the request is shown once,
                 // inside generatingRow, so it never appears twice on screen.
                 .opacity(store.isGeneratingImage ? 0 : 1)
@@ -296,6 +295,7 @@ struct ImageStudioView: View {
         }
         .padding(14 * AppScale.k)
         // One unified translucent capsule block (same as chat + home menu).
+        .glassSurface(radius: 26 * AppScale.k)
         .padding(.horizontal, 12 * AppScale.k)
         .padding(.bottom, 10 * AppScale.k)
         .padding(.top, 6 * AppScale.k)
@@ -329,7 +329,6 @@ struct ImageStudioView: View {
         .padding(.horizontal, 12 * AppScale.k)
         .padding(.vertical, 8 * AppScale.k)
         // Small floating glass chip (Telegram / iOS 26 style).
-        .glassCapsule()
     }
 
     private func prepare() {

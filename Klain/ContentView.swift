@@ -117,7 +117,6 @@ struct ContentView: View {
                     }
                     .padding(.bottom, 4 * AppScale.k)
                     HomeBanner()
-                    SigningReminder()
                 }
                 .padding(.horizontal, 16 * AppScale.k)
                 .padding(.top, 8 * AppScale.k)
@@ -391,7 +390,6 @@ struct ContentView: View {
                 .padding(.horizontal, 16 * AppScale.k)
                 .padding(.vertical, 11 * AppScale.k)
                 // Floating glass input field (Telegram / iOS 26 style).
-                .glassCapsule()
             if let reason = store.imageSupportWarning(for: attachments) {
                 Label(reason, systemImage: "exclamationmark.triangle")
                     .font(.caption2)
@@ -451,6 +449,7 @@ struct ContentView: View {
         .padding(.horizontal, 16 * AppScale.k)
         .padding(.bottom, 10 * AppScale.k)
         .padding(.top, 4 * AppScale.k)
+        .glassSurface(radius: 24 * AppScale.k)
     }
     private func importFiles(_ result: Result<[URL], Error>) {
         do {
