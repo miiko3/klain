@@ -106,16 +106,29 @@ struct ContentView: View {
             LiquidBackground()
             ScrollView {
                 VStack(spacing: 14 * AppScale.k) {
-                    // Only the ad banner remains; no title block, no reminder.
+                    // Large native title area (no custom capsule, no gray plate).
+                    HStack {
+                        Text("klain")
+                            .font(.system(size: 34 * AppScale.k, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image("BrandLogo")
+                            .resizable().scaledToFit()
+                            .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
+                            .clipShape(RoundedRectangle(cornerRadius: 10 * AppScale.k, style: .continuous))
+                    }
+                    .padding(.bottom, 4 * AppScale.k)
                     HomeBanner()
+                    SigningReminder()
                 }
                 .padding(.horizontal, 16 * AppScale.k)
                 .padding(.top, 8 * AppScale.k)
                 .padding(.bottom, 140 * AppScale.k)
             }
         }
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .navigationBarTitleDisplayMode(.inline)
+        .glassContainer()
+        .navigationTitle("klain")
+        .navigationBarTitleDisplayMode(.large)
         .safeAreaInset(edge: .bottom) { homeMenu }
     }
     private var homeMenu: some View {
@@ -165,18 +178,10 @@ struct ContentView: View {
             }
             .scrollContentBackground(.hidden)
         }
+        .glassContainer()
+        .navigationTitle("Чаты")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Чаты")
-                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16 * AppScale.k)
-                    .padding(.vertical, 8 * AppScale.k)
-                    .capsuleGlass()
-                    .padding(.top, 5 * AppScale.k)
-            }
             if !store.activeChats.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
@@ -201,8 +206,6 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
             .swipeActions(allowsFullSwipe: false) {
                 Button("Удалить", role: .destructive) { deleting = chat.id }.disabled(store.isSending)
                 Button(archived ? "Вернуть" : "В архив") { store.archiveChat(chat.id, archived: !archived) }.disabled(store.isSending)
@@ -274,35 +277,20 @@ struct ContentView: View {
                 composer
             }
         }
+        .glassContainer()
+        .navigationTitle(store.selectedChat?.title ?? "Новый чат")
         .navigationBarTitleDisplayMode(.inline)
-        .background(BackTitleConfigurator())
-        // Title + toolbar buttons use one translucent capsule style, no backplate.
-        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(store.selectedChat?.title ?? "Новый чат")
-                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 16 * AppScale.k)
-                    .padding(.vertical, 8 * AppScale.k)
-                    .capsuleGlass()
-                    .padding(.top, 5 * AppScale.k)
-            }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { stats = true } label: {
                     Image(systemName: "chart.bar")
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold))
+                        .font(.system(size: 17 * AppScale.k, weight: .regular))
                         .foregroundStyle(.primary)
-                        .padding(10 * AppScale.k)
-                        .capsuleGlass()
                 }.accessibilityLabel("Статистика")
                 Button { settings = true } label: {
                     Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold))
+                        .font(.system(size: 17 * AppScale.k, weight: .regular))
                         .foregroundStyle(.primary)
-                        .padding(10 * AppScale.k)
-                        .capsuleGlass()
                 }.accessibilityLabel("Провайдеры")
             }
         }
@@ -319,7 +307,6 @@ struct ContentView: View {
                     .font(.system(size: 26 * AppScale.k))
                     .offset(y: -46)
                     .padding(6 * AppScale.k)
-                    .background(.ultraThinMaterial, in: Circle())
             }
             Text("Давай начнём.").font(.system(size: 30 * AppScale.k, weight: .bold, design: .rounded))
             Text("Твои модели. Твои идеи.\nОдин спокойный уголок для диалогов.").foregroundStyle(.secondary)
@@ -381,7 +368,6 @@ struct ContentView: View {
                 Label("Сеть", systemImage: "globe")
                     .font(.caption)
                     .padding(10 * AppScale.k)
-                    .background(store.selectedChat?.webSearch == true ? Color.primary.opacity(0.18) : Color.clear, in: Capsule())
                     .capsuleGlass()
                     .foregroundStyle(.primary)
             }
@@ -404,6 +390,7 @@ struct ContentView: View {
                 }
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7)
+                .foregroundStyle(.primary).tint(.primary)
             if let reason = store.imageSupportWarning(for: attachments) {
                 Label(reason, systemImage: "exclamationmark.triangle")
                     .font(.caption2)
@@ -427,7 +414,6 @@ struct ContentView: View {
                             .font(.system(size: 13 * AppScale.k, weight: .regular))
                             .foregroundStyle(.primary)
                             .frame(width: 34 * AppScale.k, height: 34 * AppScale.k)
-                            .background(.ultraThinMaterial, in: Circle())
                     }
                 } else {
                     Button {
@@ -445,7 +431,6 @@ struct ContentView: View {
                             .fontWeight(.regular)
                             .foregroundStyle(Color.primary)
                             .frame(width: 34 * AppScale.k, height: 34 * AppScale.k)
-                            .background(.ultraThinMaterial, in: Circle())
                     }
                     .disabled(
                         store.activeProvider == nil
@@ -531,21 +516,16 @@ struct AttachmentThumb: View {
                     .frame(width: 58 * AppScale.k, height: 58 * AppScale.k)
                     .clipShape(RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
             } else {
-                RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                Image(systemName: "doc")
+                    .font(.system(size: 22 * AppScale.k, weight: .light))
+                    .foregroundStyle(.secondary)
                     .frame(width: 58 * AppScale.k, height: 58 * AppScale.k)
-                    .overlay {
-                        Image(systemName: "doc")
-                            .foregroundStyle(.secondary)
-                    }
             }
-
             Button(action: onRemove) {
                 Image(systemName: "xmark")
                     .font(.system(size: 8 * AppScale.k, weight: .regular))
                     .foregroundStyle(.primary)
                     .frame(width: 18 * AppScale.k, height: 18 * AppScale.k)
-                    .background(.ultraThinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .offset(x: 5, y: -5)

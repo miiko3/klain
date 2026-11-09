@@ -88,25 +88,12 @@ struct ProvidersView: View {
                     .padding(16 * AppScale.k)
                 }
             }
+            .glassContainer()
+            .navigationTitle("Провайдеры")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Провайдеры")
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 16 * AppScale.k)
-                        .padding(.vertical, 8 * AppScale.k)
-                        .capsuleGlass()
-                        .padding(.top, 5 * AppScale.k)
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 14 * AppScale.k)
-                        .padding(.vertical, 7 * AppScale.k)
-                        .capsuleGlass()
                 }
             }
             .sheet(item: $editing) { ProviderEditor(provider: $0) }
@@ -143,7 +130,6 @@ struct ProvidersView: View {
                     .font(.system(size: 14 * AppScale.k, weight: .semibold))
                     .foregroundStyle(.primary)
                     .frame(width: 32 * AppScale.k, height: 32 * AppScale.k)
-                    .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 11 * AppScale.k, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -163,7 +149,6 @@ struct ProvidersView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(10 * AppScale.k)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -206,7 +191,6 @@ struct ProviderEditor: View {
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(14 * AppScale.k)
-                                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 18 * AppScale.k, style: .continuous))
                         }
                     }
                     .padding(16 * AppScale.k)
@@ -214,31 +198,15 @@ struct ProviderEditor: View {
             }
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .glassContainer()
+            .navigationTitle(provider.name.isEmpty ? "Новый провайдер" : provider.name)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Назад") { dismiss() }
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 14 * AppScale.k).padding(.vertical, 7 * AppScale.k)
-                        .capsuleGlass()
-                }
-                ToolbarItem(placement: .principal) {
-                    Text(provider.name.isEmpty ? "Новый провайдер" : provider.name)
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .padding(.horizontal, 16 * AppScale.k).padding(.vertical, 8 * AppScale.k)
-                        .capsuleGlass()
-                        .padding(.top, 5 * AppScale.k)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Сохранить", action: save)
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 14 * AppScale.k).padding(.vertical, 7 * AppScale.k)
-                        .capsuleGlass()
                         .disabled(loading || store.isSending)
                 }
             }
@@ -258,14 +226,11 @@ struct ProviderEditor: View {
                 VStack(spacing: 0) {
                     TextField("ID провайдера", text: $slug)
                         .padding(12 * AppScale.k)
-                    Divider().opacity(0.25)
                     TextField("Отображаемое имя", text: $provider.name)
                         .padding(12 * AppScale.k)
-                    Divider().opacity(0.25)
                     TextField("Базовый URL", text: $provider.baseURL)
                         .keyboardType(.URL)
                         .padding(12 * AppScale.k)
-                    Divider().opacity(0.25)
                     SecureField("Ключ API (необязательно)", text: $provider.apiKey)
                         .padding(12 * AppScale.k)
                 }
@@ -340,7 +305,6 @@ struct ProviderEditor: View {
             .buttonStyle(.plain)
         }
         .padding(10 * AppScale.k)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
     }
 
     @ViewBuilder
@@ -353,7 +317,6 @@ struct ProviderEditor: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 7 * AppScale.k)
                 .padding(.vertical, 3 * AppScale.k)
-                .background(Color.primary.opacity(0.08), in: Capsule())
         }
     }
 
@@ -387,7 +350,6 @@ struct ProviderEditor: View {
             .buttonStyle(.plain)
         }
         .padding(10 * AppScale.k)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
     }
 
     private func editorCard<Content: View>(title: String, tint: Color, @ViewBuilder content: () -> Content) -> some View {
@@ -404,7 +366,6 @@ struct ProviderEditor: View {
     }
     private func fieldBox<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
     }
     private func loadModels() {
         loading = true

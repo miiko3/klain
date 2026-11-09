@@ -83,25 +83,12 @@ struct StatisticsView: View {
                 }
                 .scrollIndicators(.hidden)
             }
+            .glassContainer()
+            .navigationTitle("Статистика")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Статистика")
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 16 * AppScale.k)
-                        .padding(.vertical, 8 * AppScale.k)
-                        .capsuleGlass()
-                        .padding(.top, 5 * AppScale.k)
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 14 * AppScale.k)
-                        .padding(.vertical, 7 * AppScale.k)
-                        .capsuleGlass()
                 }
             }
         }
@@ -225,8 +212,6 @@ struct StatisticsView: View {
             .frame(width: 30 * AppScale.k, height: 30 * AppScale.k)
             // Translucent glass instead of an opaque white circle (fixes the
             // white-on-white icon bug on the dark theme).
-            .background(.regularMaterial, in: Circle())
-            .overlay(Circle().fill(Color.primary.opacity(0.06)))
     }
 
     private func metric(title: String, value: String, icon: String, color: Color) -> some View {
@@ -247,7 +232,6 @@ struct StatisticsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12 * AppScale.k)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15 * AppScale.k, style: .continuous))
     }
 
     private func row(color: Color, icon: String, title: String, subtitle: String, input: Int, output: Int, count: Int) -> some View {
@@ -278,7 +262,6 @@ struct StatisticsView: View {
             }
         }
         .padding(12 * AppScale.k)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15 * AppScale.k, style: .continuous))
     }
 
     private func providerRow(_ provider: Provider, color: Color) -> some View {
@@ -301,7 +284,6 @@ struct StatisticsView: View {
                 .multilineTextAlignment(.trailing)
         }
         .padding(12 * AppScale.k)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15 * AppScale.k, style: .continuous))
     }
 
     private func placeholder(icon: String, title: String, subtitle: String) -> some View {
@@ -319,7 +301,6 @@ struct StatisticsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 22 * AppScale.k)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
     }
 
     private func refreshBalances() {

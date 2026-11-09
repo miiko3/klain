@@ -58,27 +58,16 @@ struct ImageStudioView: View {
                 }
             }
         }
+        .glassContainer()
+        .navigationTitle("Картинки")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             // "Назад" stays system-provided (untouched).
-            ToolbarItem(placement: .principal) {
-                Text("Картинки")
-                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16 * AppScale.k)
-                    .padding(.vertical, 8 * AppScale.k)
-                    .capsuleGlass()
-                    .padding(.top, 5 * AppScale.k)
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { settings = true } label: {
                     Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold))
+                        .font(.system(size: 17 * AppScale.k, weight: .regular))
                         .foregroundStyle(.primary)
-                        .padding(.horizontal, 14 * AppScale.k)
-                        .padding(.vertical, 7 * AppScale.k)
-                        .capsuleGlass()
                 }
                 .accessibilityLabel("Провайдеры")
             }
@@ -189,7 +178,6 @@ struct ImageStudioView: View {
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 6 * AppScale.k)
                         .padding(.vertical, 3 * AppScale.k)
-                        .background(.ultraThinMaterial, in: Capsule())
                         .padding(6 * AppScale.k)
                 }
                 .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
@@ -228,7 +216,6 @@ struct ImageStudioView: View {
                                 .font(.system(size: 11 * AppScale.k, weight: .bold))
                                 .foregroundStyle(.primary)
                                 .padding(6 * AppScale.k)
-                                .background(.ultraThinMaterial, in: Circle())
                                 .padding(8 * AppScale.k)
                         }
                 }
@@ -238,6 +225,8 @@ struct ImageStudioView: View {
             TextField("Опиши изображение…", text: $prompt, axis: .vertical)
                 .lineLimit(2...6)
                 .focused($focused)
+                .foregroundStyle(.primary)
+                .tint(.primary)
                 // Hide the editor during generation: the request is shown once,
                 // inside generatingRow, so it never appears twice on screen.
                 .opacity(store.isGeneratingImage ? 0 : 1)
@@ -300,7 +289,6 @@ struct ImageStudioView: View {
                     }
                     .buttonStyle(GlassButtonStyle(prominent: true))
                     .disabled(!canGenerate)
-                    .opacity(canGenerate ? 1 : 0.5)
                 }
             }
         }
@@ -322,13 +310,12 @@ struct ImageStudioView: View {
                 if !store.currentImagePrompt.isEmpty {
                     Text(store.currentImagePrompt)
                         .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
-                        .padding(6 * AppScale.k).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8 * AppScale.k, style: .continuous))
+                        .padding(6 * AppScale.k)
                 }
             }
             Spacer()
         }
         .padding(10 * AppScale.k)
-        .background(Palette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
     }
 
     private func chipLabel(systemImage: String, text: String) -> some View {
@@ -396,33 +383,16 @@ struct ImagePreviewSheet: View {
                     Text("Не удалось открыть изображение").foregroundStyle(.primary)
                 }
             }
+            .glassContainer()
+            .navigationTitle(image.model)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text(image.model)
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .padding(.horizontal, 16 * AppScale.k)
-                        .padding(.vertical, 8 * AppScale.k)
-                        .capsuleGlass()
-                        .padding(.top, 5 * AppScale.k)
-                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Закрыть") { dismiss() }
-                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 14 * AppScale.k).padding(.vertical, 7 * AppScale.k)
-                        .capsuleGlass()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button { Task { @MainActor in await save() } } label: {
                         Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 15 * AppScale.k, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .padding(10 * AppScale.k)
-                            .capsuleGlass()
                     }
                 }
             }

@@ -155,14 +155,12 @@ struct MDBlockView: View {
                     Button { UIPasteboard.general.string = code } label: { Label("Копировать код", systemImage: "doc.on.doc").font(.caption) } }
                 ScrollView(.horizontal) { Text(verbatim: code).font(.system(.callout, design: .monospaced)).textSelection(.enabled) }
             }
-            .padding(12 * AppScale.k).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
+            .padding(12 * AppScale.k)
         case .quote(let blocks):
             HStack(alignment: .top, spacing: 8) {
-                RoundedRectangle(cornerRadius: 2 * AppScale.k).fill(Color.primary.opacity(0.5)).frame(width: 3 * AppScale.k)
                 VStack(alignment: .leading, spacing: 4) { ForEach(Array(blocks.enumerated()), id: \.offset) { _, b in MDBlockView(block: b) } }
             }.padding(.vertical, 4 * AppScale.k)
         case .rule:
-            Divider()
         case .list(let ordered, let items):
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
@@ -181,14 +179,11 @@ struct MDBlockView: View {
                 Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
                     GridRow { ForEach(Array(head.enumerated()), id: \.offset) { j, c in
                         Text(mdInline(c)).font(.caption.weight(.bold)).padding(7 * AppScale.k).frame(maxWidth: .infinity, alignment: alignOf(align, j))
-                            .background(.ultraThinMaterial)
                     } }
-                    Divider()
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
                         GridRow { ForEach(Array(head.enumerated()), id: \.offset) { j, _ in
                             Text(mdInline(j < r.count ? r[j] : "")).font(.caption).padding(7 * AppScale.k).frame(maxWidth: .infinity, alignment: alignOf(align, j))
                         } }
-                        Divider()
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12 * AppScale.k, style: .continuous))

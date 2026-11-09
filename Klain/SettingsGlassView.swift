@@ -79,18 +79,10 @@ struct SettingsScreen: View {
                 .padding(.vertical, 16 * AppScale.k)
             }
         }
+        .glassContainer()
+        .navigationTitle("Настройки")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Настройки")
-                    .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16 * AppScale.k)
-                    .padding(.vertical, 8 * AppScale.k)
-                    .capsuleGlass()
-                    .padding(.top, 5 * AppScale.k)
-            }
         }
         .sheet(isPresented: $providers) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
@@ -131,7 +123,6 @@ private struct SettingsRowView: View {
                 .font(.system(size: 15 * AppScale.k, weight: .semibold))
                 .foregroundStyle(row.tint)
                 .frame(width: 30 * AppScale.k, height: 30 * AppScale.k)
-                .background(row.tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10 * AppScale.k, style: .continuous))
             Text(row.title)
                 .font(.system(.subheadline, design: .rounded).weight(.medium))
                 .foregroundStyle(.primary)
@@ -143,7 +134,6 @@ private struct SettingsRowView: View {
         .padding(.horizontal, 12 * AppScale.k)
         .padding(.vertical, 10 * AppScale.k)
         .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
     }
 }
