@@ -106,21 +106,8 @@ struct ContentView: View {
             LiquidBackground()
             ScrollView {
                 VStack(spacing: 14 * AppScale.k) {
-                    // Title in its own rounded glass block (not a flat navbar plate).
-                    HStack(spacing: 10 * AppScale.k) {
-                        Image("BrandLogo")
-                            .resizable().scaledToFit()
-                            .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
-                            .clipShape(RoundedRectangle(cornerRadius: 10 * AppScale.k, style: .continuous))
-                        Text("klain")
-                            .font(.system(size: 34 * AppScale.k, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                    }
-                    .padding(14 * AppScale.k)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22 * AppScale.k, style: .continuous))
+                    // Only the ad banner remains; no title block, no reminder.
                     HomeBanner()
-                    SigningReminder()
                 }
                 .padding(.horizontal, 16 * AppScale.k)
                 .padding(.top, 8 * AppScale.k)
@@ -138,8 +125,8 @@ struct ContentView: View {
             menuButton("Настройки", icon: "slider.horizontal.3", action: { path.append(.settings) })
         }
         .padding(.vertical, 8 * AppScale.k)
-        // One unified rounded glass block — no per-button plates.
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26 * AppScale.k, style: .continuous))
+        // One unified, MAXIMALLY rounded (capsule) glass block.
+        .background(.ultraThinMaterial, in: Capsule())
         .padding(.horizontal, 16 * AppScale.k)
         .padding(.bottom, 22 * AppScale.k)
     }
@@ -233,33 +220,6 @@ struct ContentView: View {
         ZStack {
             LiquidBackground()
             VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    modelMenu
-                    Menu {
-                        ForEach(["default", "low", "medium", "high", "xhigh", "max"], id: \.self) { level in
-                            Button { store.setReasoning(level) } label: { Label(level == "xhigh" ? "xHigh" : level.capitalized, systemImage: store.selectedChat?.reasoning == level ? "checkmark" : "brain") }
-                        }
-                    } label: {
-                        Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
-                            .font(.caption)
-                            .padding(10 * AppScale.k)
-                            .glassCapsule()
-                    }.disabled(store.isSending)
-                    Button {
-                        store.setWebSearch(store.selectedChat?.webSearch != true)
-                    } label: {
-                        Label("Сеть", systemImage: "globe")
-                            .font(.caption)
-                            .padding(10 * AppScale.k)
-                            .background(store.selectedChat?.webSearch == true ? Color.primary.opacity(0.18) : Color.clear, in: Capsule())
-                            .glassCapsule()
-                            .foregroundStyle(.primary)
-                    }
-                        .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8 * AppScale.k)
-
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 22) {
@@ -304,7 +264,7 @@ struct ContentView: View {
         .navigationTitle(store.selectedChat?.title ?? "Новый чат")
         .navigationBarTitleDisplayMode(.inline)
         .background(BackTitleConfigurator())
-        // No opaque navbar / composer backplate in chat: content shows through.
+        // No opaque navbar backplate in chat; the composer keeps its own glass block.
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -367,8 +327,36 @@ struct ContentView: View {
         }
         .disabled(store.isSending)
     }
+    // Reasoning + web controls now live INSIDE the composer, above the text field.
+    private var chatControls: some View {
+        HStack(spacing: 8 * AppScale.k) {
+            modelMenu
+            Menu {
+                ForEach(["default", "low", "medium", "high", "xhigh", "max"], id: \.self) { level in
+                    Button { store.setReasoning(level) } label: { Label(level == "xhigh" ? "xHigh" : level.capitalized, systemImage: store.selectedChat?.reasoning == level ? "checkmark" : "brain") }
+                }
+            } label: {
+                Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
+                    .font(.caption)
+                    .padding(10 * AppScale.k)
+                    .glassCapsule()
+            }.disabled(store.isSending)
+            Button {
+                store.setWebSearch(store.selectedChat?.webSearch != true)
+            } label: {
+                Label("Сеть", systemImage: "globe")
+                    .font(.caption)
+                    .padding(10 * AppScale.k)
+                    .background(store.selectedChat?.webSearch == true ? Color.primary.opacity(0.18) : Color.clear, in: Capsule())
+                    .glassCapsule()
+                    .foregroundStyle(.primary)
+            }
+                .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
+        }
+    }
     private var composer: some View {
         VStack(alignment: .leading, spacing: 10) {
+            chatControls
             if !attachments.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -435,6 +423,8 @@ struct ContentView: View {
             }
         }
         .padding(14 * AppScale.k)
+        // Restored 0.6.0 composer: single rounded translucent glass block.
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24 * AppScale.k, style: .continuous))
         .padding(12 * AppScale.k)
     }
     private func importFiles(_ result: Result<[URL], Error>) {

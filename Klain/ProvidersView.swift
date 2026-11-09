@@ -22,7 +22,18 @@ struct ProvidersView: View {
             ZStack {
                 LiquidBackground()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 14 * AppScale.k) {
+                        // Title in a capsule block, matching the "Готово" button style.
+                        HStack {
+                            Text("Провайдеры")
+                                .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 14 * AppScale.k)
+                                .padding(.vertical, 7 * AppScale.k)
+                                .background(.ultraThinMaterial, in: Capsule())
+                            Spacer()
+                        }
+                        .padding(.top, 5 * AppScale.k)
                         card(title: "ЧЕРНОВИКИ", tint: GlassPalette.violet) {
                             if store.drafts.isEmpty {
                                 empty("Нет черновиков")
@@ -88,8 +99,8 @@ struct ProvidersView: View {
                     .padding(16 * AppScale.k)
                 }
             }
-            .navigationTitle("Провайдеры")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
@@ -177,7 +188,19 @@ struct ProviderEditor: View {
             ZStack {
                 LiquidBackground()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 14 * AppScale.k) {
+                        // Title in a capsule block (same style as navigation buttons).
+                        HStack {
+                            Text(provider.name.isEmpty ? "Новый провайдер" : provider.name)
+                                .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .padding(.horizontal, 14 * AppScale.k)
+                                .padding(.vertical, 7 * AppScale.k)
+                                .background(.ultraThinMaterial, in: Capsule())
+                            Spacer()
+                        }
+                        .padding(.top, 5 * AppScale.k)
                         connectionSection
                         modelsSection
                         headersSection
@@ -201,7 +224,8 @@ struct ProviderEditor: View {
             }
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
-            .navigationTitle(provider.name).navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Назад") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Сохранить", action: save).disabled(loading || store.isSending) } }
             .onAppear { if !ready { if let draft = store.drafts.first(where: { $0.id == provider.id }) { provider = draft }; models = provider.models ?? []; headers = provider.headers ?? []; slug = provider.slug ?? "custom"; ready = true } }
             .onChange(of: provider) { _, _ in persistDraft() }

@@ -42,7 +42,19 @@ struct ImageStudioView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 14 * AppScale.k) {
+                        // Custom header: title in a capsule block, no blurred
+                        // navbar backplate, dropped 5px below the system bar.
+                        HStack {
+                            Text("Картинки")
+                                .font(.system(size: 17 * AppScale.k, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 14 * AppScale.k)
+                                .padding(.vertical, 7 * AppScale.k)
+                                .background(.ultraThinMaterial, in: Capsule())
+                            Spacer()
+                        }
+                        .padding(.top, 5 * AppScale.k)
                         hero
                         if !store.isGeneratingImage && store.generatedImages.isEmpty { emptyGallery }
                         card { gallery }
@@ -58,8 +70,8 @@ struct ImageStudioView: View {
                 }
             }
         }
-        .navigationTitle("Картинки")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { settings = true } label: { Image(systemName: "slider.horizontal.3") }
@@ -288,6 +300,8 @@ struct ImageStudioView: View {
             }
         }
         .padding(14 * AppScale.k)
+        // Restored 0.6.0 composer: one rounded translucent glass block.
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26 * AppScale.k, style: .continuous))
         .padding(.horizontal, 12 * AppScale.k)
         .padding(.bottom, 10 * AppScale.k)
         .padding(.top, 6 * AppScale.k)
