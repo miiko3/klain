@@ -72,15 +72,16 @@ struct SettingsScreen: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
+                    .padding(16 * AppScale.k)
                     .glassSurface(radius: 22, tint: GlassPalette.violet)
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
+                .padding(.horizontal, 18 * AppScale.k)
+                .padding(.vertical, 16 * AppScale.k)
             }
         }
         .navigationTitle("Настройки")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .sheet(isPresented: $providers) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
     }
@@ -90,11 +91,11 @@ struct SettingsScreen: View {
             Text(title)
                 .font(.system(.subheadline, design: .rounded).weight(.bold))
                 .foregroundStyle(.primary)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 4 * AppScale.k)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(14 * AppScale.k)
         .glassSurface(radius: 22, tint: tint)
     }
 }
@@ -117,22 +118,22 @@ private struct SettingsRowView: View {
     private var label: some View {
         HStack(spacing: 12) {
             Image(systemName: row.symbol)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 15 * AppScale.k, weight: .semibold))
                 .foregroundStyle(row.tint)
-                .frame(width: 30, height: 30)
-                .background(row.tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .frame(width: 30 * AppScale.k, height: 30 * AppScale.k)
+                .background(row.tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10 * AppScale.k, style: .continuous))
             Text(row.title)
                 .font(.system(.subheadline, design: .rounded).weight(.medium))
                 .foregroundStyle(.primary)
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 12 * AppScale.k, weight: .semibold))
                 .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12 * AppScale.k)
+        .padding(.vertical, 10 * AppScale.k)
         .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
     }
 }

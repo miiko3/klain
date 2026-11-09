@@ -36,13 +36,13 @@ struct LiquidBackground: View {
                 ], startPoint: .topLeading, endPoint: .bottomTrailing)
 
             Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04))
-                .frame(width: 330, height: 330).blur(radius: 110)
+                .frame(width: 330 * AppScale.k, height: 330 * AppScale.k).blur(radius: 110)
                 .offset(x: drift ? 140 : -150, y: drift ? -270 : -170)
             Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.035))
-                .frame(width: 300, height: 300).blur(radius: 120)
+                .frame(width: 300 * AppScale.k, height: 300 * AppScale.k).blur(radius: 120)
                 .offset(x: drift ? -160 : 150, y: drift ? 280 : 210)
             Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.03))
-                .frame(width: 250, height: 250).blur(radius: 100)
+                .frame(width: 250 * AppScale.k, height: 250 * AppScale.k).blur(radius: 100)
                 .offset(x: drift ? 50 : -70, y: drift ? 60 : -40)
         }
         .ignoresSafeArea()
@@ -161,7 +161,7 @@ struct VisionBadge: View {
         Label(compact ? "фото" : "видит фото", systemImage: "camera.viewfinder")
             .font(.system(.caption2, design: .rounded).weight(.bold))
             .foregroundStyle(Color.primary)
-            .padding(.horizontal, 7).padding(.vertical, 3)
+            .padding(.horizontal, 7 * AppScale.k).padding(.vertical, 3 * AppScale.k)
             .background(.ultraThinMaterial, in: Capsule())
     }
 }

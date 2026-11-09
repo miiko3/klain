@@ -77,9 +77,9 @@ struct StatisticsView: View {
                         chatsCard
                         limitsCard
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 32)
+                    .padding(.horizontal, 16 * AppScale.k)
+                    .padding(.top, 8 * AppScale.k)
+                    .padding(.bottom, 32 * AppScale.k)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -88,7 +88,7 @@ struct StatisticsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
                 }
             }
@@ -107,9 +107,9 @@ struct StatisticsView: View {
             }
             Text("Только usage от API. Старые и пропущенные ответы не оцениваются, кэш входит во входящие.")
                 .font(.system(.caption2, design: .rounded))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.secondary)
         }
-        .padding(16)
+        .padding(16 * AppScale.k)
         .glassSurface(radius: 22, tint: GlassPalette.accent)
     }
 
@@ -132,7 +132,7 @@ struct StatisticsView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(16 * AppScale.k)
         .glassSurface(radius: 22, tint: GlassPalette.violet)
     }
 
@@ -155,7 +155,7 @@ struct StatisticsView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(16 * AppScale.k)
         .glassSurface(radius: 22, tint: GlassPalette.cyan)
     }
 
@@ -173,7 +173,7 @@ struct StatisticsView: View {
                 refreshBalances()
             } label: {
                 HStack(spacing: 8) {
-                    if loading { ProgressView().tint(.white).scaleEffect(0.8) }
+                    if loading { ProgressView().tint(.primary).scaleEffect(0.8) }
                     Image(systemName: "arrow.clockwise")
                     Text("Обновить баланс")
                 }
@@ -183,9 +183,9 @@ struct StatisticsView: View {
             .frame(maxWidth: .infinity)
             Text("Rate limit — временный лимит запросов, а не купленные токены. Баланс доступен не для всех провайдеров.")
                 .font(.system(.caption2, design: .rounded))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.secondary)
         }
-        .padding(16)
+        .padding(16 * AppScale.k)
         .glassSurface(radius: 22, tint: GlassPalette.mint)
     }
 
@@ -199,7 +199,7 @@ struct StatisticsView: View {
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -208,9 +208,9 @@ struct StatisticsView: View {
 
     private func iconCircle(_ icon: String, color: Color) -> some View {
         Image(systemName: icon)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.system(size: 14 * AppScale.k, weight: .semibold))
             .foregroundStyle(.primary)
-            .frame(width: 30, height: 30)
+            .frame(width: 30 * AppScale.k, height: 30 * AppScale.k)
             .background(color.opacity(0.85), in: Circle())
     }
 
@@ -218,21 +218,21 @@ struct StatisticsView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11 * AppScale.k, weight: .semibold))
                     .foregroundStyle(.primary)
                 Text(title)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .font(.system(size: 11 * AppScale.k, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
             }
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: 22 * AppScale.k, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .padding(12 * AppScale.k)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15 * AppScale.k, style: .continuous))
     }
 
     private func row(color: Color, icon: String, title: String, subtitle: String, input: Int, output: Int, count: Int) -> some View {
@@ -245,7 +245,7 @@ struct StatisticsView: View {
                     .lineLimit(1)
                 Text(subtitle.isEmpty ? "—" : subtitle)
                     .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
@@ -256,14 +256,14 @@ struct StatisticsView: View {
                     Text("↓ \(output.formatted())")
                         .foregroundStyle(GlassPalette.violet)
                 }
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: 12 * AppScale.k, weight: .semibold, design: .monospaced))
                 Text("\(count) ответов")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.system(size: 10 * AppScale.k, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
             }
         }
-        .padding(12)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .padding(12 * AppScale.k)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15 * AppScale.k, style: .continuous))
     }
 
     private func providerRow(_ provider: Provider, color: Color) -> some View {
@@ -275,36 +275,36 @@ struct StatisticsView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(store.remaining[provider.id] ?? "Остаток токенов: нет данных")
-                    .font(.system(size: 11, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(.system(size: 11 * AppScale.k, design: .rounded))
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
             Spacer(minLength: 8)
             Text(balances[provider.id] ?? "не запрошен")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.75))
+                .font(.system(size: 11 * AppScale.k, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.trailing)
         }
-        .padding(12)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .padding(12 * AppScale.k)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 15 * AppScale.k, style: .continuous))
     }
 
     private func placeholder(icon: String, title: String, subtitle: String) -> some View {
         VStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 26, weight: .light))
-                .foregroundStyle(.white.opacity(0.35))
+                .font(.system(size: 26 * AppScale.k, weight: .light))
+                .foregroundStyle(.tertiary)
             Text(title)
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(.primary)
             Text(subtitle)
                 .font(.system(.caption, design: .rounded))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 22)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.vertical, 22 * AppScale.k)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
     }
 
     private func refreshBalances() {

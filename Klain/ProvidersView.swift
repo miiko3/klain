@@ -82,10 +82,10 @@ struct ProvidersView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(16)
+                            .padding(16 * AppScale.k)
                             .glassSurface(radius: 22, tint: GlassPalette.accent)
                     }
-                    .padding(16)
+                    .padding(16 * AppScale.k)
                 }
             }
             .navigationTitle("Провайдеры")
@@ -93,7 +93,7 @@ struct ProvidersView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: 15 * AppScale.k, weight: .semibold, design: .rounded))
                 }
             }
             .sheet(item: $editing) { ProviderEditor(provider: $0) }
@@ -107,11 +107,11 @@ struct ProvidersView: View {
             Text(title)
                 .font(.system(.caption, design: .rounded).weight(.bold))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 4 * AppScale.k)
             VStack(spacing: 8) { content() }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(14 * AppScale.k)
         .glassSurface(radius: 24, tint: tint)
     }
 
@@ -120,24 +120,24 @@ struct ProvidersView: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
+            .padding(12 * AppScale.k)
     }
 
     private func providerRow(title: String, subtitle: String?, icon: String, tint: Color, trailing: String?, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 * AppScale.k, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .frame(width: 32, height: 32)
-                    .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .frame(width: 32 * AppScale.k, height: 32 * AppScale.k)
+                    .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 11 * AppScale.k, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .lineLimit(1)
                     if let subtitle {
                         Text(subtitle)
-                            .font(.system(size: 10, design: .rounded))
+                            .font(.system(size: 10 * AppScale.k, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -146,12 +146,12 @@ struct ProvidersView: View {
                     Text(trailing).font(.caption2).foregroundStyle(.secondary)
                 }
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11 * AppScale.k, weight: .semibold))
                     .foregroundStyle(.tertiary)
             }
-            .padding(10)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(10 * AppScale.k)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -185,18 +185,18 @@ struct ProviderEditor: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(16)
+                            .padding(16 * AppScale.k)
                             .glassSurface(radius: 22, tint: GlassPalette.accent2)
                         if !error.isEmpty {
                             Text(error)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(14)
-                                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .padding(14 * AppScale.k)
+                                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 18 * AppScale.k, style: .continuous))
                         }
                     }
-                    .padding(16)
+                    .padding(16 * AppScale.k)
                 }
             }
             .textInputAutocapitalization(.never)
@@ -218,17 +218,17 @@ struct ProviderEditor: View {
             fieldBox {
                 VStack(spacing: 0) {
                     TextField("ID провайдера", text: $slug)
-                        .padding(12)
+                        .padding(12 * AppScale.k)
                     Divider().opacity(0.25)
                     TextField("Отображаемое имя", text: $provider.name)
-                        .padding(12)
+                        .padding(12 * AppScale.k)
                     Divider().opacity(0.25)
                     TextField("Базовый URL", text: $provider.baseURL)
                         .keyboardType(.URL)
-                        .padding(12)
+                        .padding(12 * AppScale.k)
                     Divider().opacity(0.25)
                     SecureField("Ключ API (необязательно)", text: $provider.apiKey)
-                        .padding(12)
+                        .padding(12 * AppScale.k)
                 }
             }
             Text("Для своего шлюза можно оставить ключ пустым и задать авторизацию через заголовки.")
@@ -251,7 +251,7 @@ struct ProviderEditor: View {
 
             fieldBox {
                 TextField("Фильтр моделей", text: $query)
-                    .padding(12)
+                    .padding(12 * AppScale.k)
             }
 
             if models.contains(where: { $0.supportsVision == true }) {
@@ -288,20 +288,20 @@ struct ProviderEditor: View {
                 TextField("model-id", text: $models[index].id)
                     .font(.system(.caption, design: .monospaced))
                 TextField("Отображаемое имя", text: $models[index].name)
-                    .font(.system(size: 10, design: .rounded))
+                    .font(.system(size: 10 * AppScale.k, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
             modelBadge(index)
             Button { models.remove(at: index) } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 * AppScale.k, weight: .semibold))
                     .foregroundStyle(.red.opacity(0.85))
             }
             .buttonStyle(.plain)
         }
-        .padding(10)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(10 * AppScale.k)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
     }
 
     @ViewBuilder
@@ -310,10 +310,10 @@ struct ProviderEditor: View {
             VisionBadge()
         } else if models[index].supportsVision == false {
             Text("текст")
-                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .font(.system(size: 9 * AppScale.k, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
+                .padding(.horizontal, 7 * AppScale.k)
+                .padding(.vertical, 3 * AppScale.k)
                 .background(Color.primary.opacity(0.08), in: Capsule())
         }
     }
@@ -342,13 +342,13 @@ struct ProviderEditor: View {
             }
             Button { headers.removeAll { $0.id == header.wrappedValue.id } } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 * AppScale.k, weight: .semibold))
                     .foregroundStyle(.red.opacity(0.85))
             }
             .buttonStyle(.plain)
         }
-        .padding(10)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(10 * AppScale.k)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
     }
 
     private func editorCard<Content: View>(title: String, tint: Color, @ViewBuilder content: () -> Content) -> some View {
@@ -356,16 +356,16 @@ struct ProviderEditor: View {
             Text(title)
                 .font(.system(.caption, design: .rounded).weight(.bold))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 4 * AppScale.k)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(14 * AppScale.k)
         .glassSurface(radius: 24, tint: tint)
     }
     private func fieldBox<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
     }
     private func loadModels() {
         loading = true

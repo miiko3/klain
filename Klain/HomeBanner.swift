@@ -5,7 +5,7 @@ struct HomeBanner: View {
         if let url = URL(string: "https://cheapvibecode.ru/ref/FJEU3K8DC9") {
             Link(destination: url) {
                 HStack(spacing: 12) {
-                    Image("AdLogo").resizable().scaledToFit().frame(width: 54, height: 54).clipShape(RoundedRectangle(cornerRadius: 12))
+                    Image("AdLogo").resizable().scaledToFit().frame(width: 54 * AppScale.k, height: 54 * AppScale.k).clipShape(RoundedRectangle(cornerRadius: 12 * AppScale.k))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Реклама").font(.caption2).foregroundStyle(.secondary)
                         Text("CheapVibeCode").font(.headline)
@@ -14,7 +14,7 @@ struct HomeBanner: View {
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right").foregroundStyle(.secondary)
                 }
-                .padding(16)
+                .padding(16 * AppScale.k)
                 .glassSurface(radius: 22)
             }
             .buttonStyle(.plain)
@@ -35,7 +35,7 @@ struct SigningReminder: View {
                     .font(.caption2).foregroundStyle(.secondary)
                 Button("Я обновил приложение") { start = Date().timeIntervalSince1970; confirmReset = true }.font(.caption).buttonStyle(.borderless)
             }
-            .padding(16)
+            .padding(16 * AppScale.k)
             .glassSurface(radius: 22)
         }.onAppear { if start == 0 { start = Date().timeIntervalSince1970 } }
             .alert("Таймер обновлён", isPresented: $confirmReset) { Button("Понятно", role: .cancel) {} } message: { Text("Начат новый отсчёт на 7 дней. Эта кнопка не продлевает подпись приложения.") }

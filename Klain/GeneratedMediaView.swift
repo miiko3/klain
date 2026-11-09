@@ -8,8 +8,8 @@ struct GeneratedMediaView: View {
     @State private var error: String?
     var body: some View {
         VStack {
-            if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 12)) }
-            else if let player { VideoPlayer(player: player).frame(height: 240) }
+            if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 12 * AppScale.k)) }
+            else if let player { VideoPlayer(player: player).frame(height: 240 * AppScale.k) }
             else if let error { Text(error).font(.caption).foregroundStyle(.secondary) }
             else { ProgressView("Загрузка медиа…") }
             if let url = URL(string: media.url), url.scheme == "https" { Link("Открыть оригинал", destination: url).font(.caption) }

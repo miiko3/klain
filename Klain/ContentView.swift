@@ -105,45 +105,59 @@ struct ContentView: View {
         ZStack {
             LiquidBackground()
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 14 * AppScale.k) {
+                    // Title in its own rounded glass block (not a flat navbar plate).
+                    HStack(spacing: 10 * AppScale.k) {
+                        Image("BrandLogo")
+                            .resizable().scaledToFit()
+                            .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
+                            .clipShape(RoundedRectangle(cornerRadius: 10 * AppScale.k, style: .continuous))
+                        Text("klain")
+                            .font(.system(size: 34 * AppScale.k, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                    }
+                    .padding(14 * AppScale.k)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22 * AppScale.k, style: .continuous))
                     HomeBanner()
                     SigningReminder()
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 140)
+                .padding(.horizontal, 16 * AppScale.k)
+                .padding(.top, 8 * AppScale.k)
+                .padding(.bottom, 140 * AppScale.k)
             }
         }
+        .toolbarBackground(.hidden, for: .navigationBar)
         .navigationTitle("klain")
         .safeAreaInset(edge: .bottom) { homeMenu }
     }
     private var homeMenu: some View {
-        HStack(spacing: 6) {
-            menuButton("Чаты", icon: "bubble.left.and.bubble.right", tint: Color.primary, action: { path.append(.chats) })
-            menuButton("Картинки", icon: "sparkles", tint: Color.primary, action: { path.append(.images) })
-            menuButton("Настройки", icon: "slider.horizontal.3", tint: Color.primary, action: { path.append(.settings) })
+        HStack(spacing: 0) {
+            menuButton("Чаты", icon: "bubble.left.and.bubble.right", action: { path.append(.chats) })
+            menuButton("Картинки", icon: "sparkles", action: { path.append(.images) })
+            menuButton("Настройки", icon: "slider.horizontal.3", action: { path.append(.settings) })
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 22)
-        // No flat backing plate: content stays visible under the floating menu.
+        .padding(.vertical, 8 * AppScale.k)
+        // One unified rounded glass block — no per-button plates.
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26 * AppScale.k, style: .continuous))
+        .padding(.horizontal, 16 * AppScale.k)
+        .padding(.bottom, 22 * AppScale.k)
     }
-    private func menuButton(_ title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
+    private func menuButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 6) {
+            VStack(spacing: 6 * AppScale.k) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .light))
+                    .font(.system(size: 20 * AppScale.k, weight: .light))
                     .foregroundStyle(.primary)
-                    .frame(width: 42, height: 42)
-                    .background(.ultraThinMaterial, in: Circle())
                 Text(title)
-                    .font(.system(size: 12, weight: .regular, design: .rounded))
+                    .font(.system(size: 12 * AppScale.k, weight: .regular, design: .rounded))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .padding(.vertical, 6 * AppScale.k)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -165,6 +179,7 @@ struct ContentView: View {
             .scrollContentBackground(.hidden)
         }
         .navigationTitle("Чаты").navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             if !store.activeChats.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -177,15 +192,15 @@ struct ContentView: View {
         ForEach(chats) { chat in
             NavigationLink(value: Route.chat(chat.id)) {
                 HStack(spacing: 12) {
-                    Text(chat.emoji ?? "💬").font(.system(size: 24))
+                    Text(chat.emoji ?? "💬").font(.system(size: 24 * AppScale.k))
                     VStack(alignment: .leading, spacing: 3) {
                         Text(chat.title).font(.system(.subheadline, design: .rounded).weight(.semibold)).lineLimit(1)
-                        Text(chat.model).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+                        Text(chat.model).font(.system(size: 10 * AppScale.k, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                    Image(systemName: "chevron.right").font(.system(size: 11 * AppScale.k, weight: .semibold)).foregroundStyle(.tertiary)
                 }
-                .padding(14)
+                .padding(14 * AppScale.k)
                 .glassSurface(radius: 18)
             }
             .buttonStyle(.plain)
@@ -200,15 +215,15 @@ struct ContentView: View {
     }
     private var emptyChats: some View {
         VStack(spacing: 14) {
-            Text("🪄").font(.system(size: 54))
+            Text("🪄").font(.system(size: 54 * AppScale.k))
             Text("Чатов пока нет,\nно творить волшебство можно начать в любой момент").multilineTextAlignment(.center).foregroundStyle(.secondary)
             Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }
                 .buttonStyle(GlassButtonStyle(prominent: true))
                 .disabled(store.isSending)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 30)
-        .padding(.horizontal, 18)
+        .padding(.vertical, 30 * AppScale.k)
+        .padding(.horizontal, 18 * AppScale.k)
         .glassSurface(radius: 22)
     }
     private var settingsList: some View {
@@ -227,7 +242,7 @@ struct ContentView: View {
                     } label: {
                         Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
                             .font(.caption)
-                            .padding(10)
+                            .padding(10 * AppScale.k)
                             .glassCapsule()
                     }.disabled(store.isSending)
                     Button {
@@ -235,7 +250,7 @@ struct ContentView: View {
                     } label: {
                         Label("Сеть", systemImage: "globe")
                             .font(.caption)
-                            .padding(10)
+                            .padding(10 * AppScale.k)
                             .background(store.selectedChat?.webSearch == true ? Color.primary.opacity(0.18) : Color.clear, in: Capsule())
                             .glassCapsule()
                             .foregroundStyle(.primary)
@@ -243,7 +258,7 @@ struct ContentView: View {
                         .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
                 }
                 .padding(.horizontal)
-                .padding(.vertical, 8)
+                .padding(.vertical, 8 * AppScale.k)
 
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -253,10 +268,10 @@ struct ContentView: View {
                                 MessageView(message: message, waiting: store.isSending && message.id == store.selectedChat?.messages.last?.id)
                                     .id(message.id)
                             }
-                            Color.clear.frame(height: 1).id("bottom")
+                            Color.clear.frame(height: 1 * AppScale.k).id("bottom")
                         }
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 14)
+                        .padding(.horizontal, 18 * AppScale.k)
+                        .padding(.vertical, 14 * AppScale.k)
                         .background(GeometryReader { geo in
                             Color.clear.preference(key: ChatBottomPrefKey.self,
                                 value: geo.frame(in: .named("chatScroll")).maxY)
@@ -278,8 +293,8 @@ struct ContentView: View {
                         if !followTail {
                             Button { followTail = true; withAnimation { proxy.scrollTo("bottom", anchor: .bottom) } } label: {
                                 Label("К последнему сообщению", systemImage: "chevron.down")
-                                    .font(.caption).padding(9).glassCapsule()
-                            }.padding(.bottom, 6)
+                                    .font(.caption).padding(9 * AppScale.k).glassCapsule()
+                            }.padding(.bottom, 6 * AppScale.k)
                         }
                     }
                 }
@@ -289,6 +304,8 @@ struct ContentView: View {
         .navigationTitle(store.selectedChat?.title ?? "Новый чат")
         .navigationBarTitleDisplayMode(.inline)
         .background(BackTitleConfigurator())
+        // No opaque navbar / composer backplate in chat: content shows through.
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("Статистика", systemImage: "chart.bar") { stats = true }
@@ -302,21 +319,21 @@ struct ContentView: View {
                 Image("BrandLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 120, height: 120)
+                    .frame(width: 120 * AppScale.k, height: 120 * AppScale.k)
 
                 Text(store.selectedChat?.emoji ?? "✨")
-                    .font(.system(size: 26))
+                    .font(.system(size: 26 * AppScale.k))
                     .offset(y: -46)
-                    .padding(6)
+                    .padding(6 * AppScale.k)
                     .background(.ultraThinMaterial, in: Circle())
             }
-            Text("Давай начнём.").font(.system(size: 30, weight: .bold, design: .rounded))
+            Text("Давай начнём.").font(.system(size: 30 * AppScale.k, weight: .bold, design: .rounded))
             Text("Твои модели. Твои идеи.\nОдин спокойный уголок для диалогов.").foregroundStyle(.secondary)
             if store.providers.isEmpty { Button("Подключить провайдера", systemImage: "plus") { settings = true }.buttonStyle(GlassButtonStyle()) }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, minHeight: 260, alignment: .center)
-        .padding(24)
+        .padding(24 * AppScale.k)
         .glassSurface(radius: 24)
     }
     private var modelMenu: some View {
@@ -345,7 +362,7 @@ struct ContentView: View {
                 Image(systemName: "chevron.down").font(.caption2)
             }
             .font(.system(.caption, design: .monospaced))
-            .padding(10)
+            .padding(10 * AppScale.k)
             .glassCapsule()
         }
         .disabled(store.isSending)
@@ -361,7 +378,7 @@ struct ContentView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, 2 * AppScale.k)
                 }
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7)
@@ -379,15 +396,15 @@ struct ContentView: View {
                         if UIImagePickerController.isSourceTypeAvailable(.camera) { camera = true } else { error = "Камера недоступна" }
                     }
                 } label: {
-                    Image(systemName: "paperclip").frame(width: 34, height: 34).glassCapsule()
+                    Image(systemName: "paperclip").frame(width: 34 * AppScale.k, height: 34 * AppScale.k).glassCapsule()
                 }
                 Spacer()
                 if store.isSending {
                     Button { store.stop() } label: {
                         Image(systemName: "stop")
-                            .font(.system(size: 13, weight: .regular))
+                            .font(.system(size: 13 * AppScale.k, weight: .regular))
                             .foregroundStyle(.primary)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 34 * AppScale.k, height: 34 * AppScale.k)
                             .background(.ultraThinMaterial, in: Circle())
                     }
                 } else {
@@ -405,7 +422,7 @@ struct ContentView: View {
                         Image(systemName: "arrow.up")
                             .fontWeight(.regular)
                             .foregroundStyle(Color.primary)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 34 * AppScale.k, height: 34 * AppScale.k)
                             .background(.ultraThinMaterial, in: Circle())
                     }
                     .disabled(
@@ -417,9 +434,8 @@ struct ContentView: View {
                 }
             }
         }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .padding(12)
+        .padding(14 * AppScale.k)
+        .padding(12 * AppScale.k)
     }
     private func importFiles(_ result: Result<[URL], Error>) {
         do {
@@ -488,12 +504,12 @@ struct AttachmentThumb: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 58, height: 58)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .frame(width: 58 * AppScale.k, height: 58 * AppScale.k)
+                    .clipShape(RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
             } else {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .frame(width: 58, height: 58)
+                    .frame(width: 58 * AppScale.k, height: 58 * AppScale.k)
                     .overlay {
                         Image(systemName: "doc")
                             .foregroundStyle(.secondary)
@@ -502,16 +518,16 @@ struct AttachmentThumb: View {
 
             Button(action: onRemove) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 8, weight: .regular))
+                    .font(.system(size: 8 * AppScale.k, weight: .regular))
                     .foregroundStyle(.primary)
-                    .frame(width: 18, height: 18)
+                    .frame(width: 18 * AppScale.k, height: 18 * AppScale.k)
                     .background(.ultraThinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .offset(x: 5, y: -5)
         }
-        .padding(.top, 5)
-        .padding(.trailing, 5)
+        .padding(.top, 5 * AppScale.k)
+        .padding(.trailing, 5 * AppScale.k)
     }
 }
 
@@ -535,7 +551,7 @@ struct MessageView: View {
                 isUser ? "ТЫ" : (message.modelName ?? "Модель"),
                 systemImage: isUser ? "person" : "sparkle"
             )
-            .font(.system(size: 10, weight: .regular, design: .rounded))
+            .font(.system(size: 10 * AppScale.k, weight: .regular, design: .rounded))
             .foregroundStyle(.secondary)
 
             if message.role == "assistant" && (waiting || message.thinking != nil) {
@@ -561,8 +577,8 @@ struct MessageView: View {
                                 Image(uiImage: image)
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: 108, height: 108)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .frame(width: 108 * AppScale.k, height: 108 * AppScale.k)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
                             }
                         }
                     }
@@ -585,7 +601,7 @@ struct MessageView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(16)
+        .padding(16 * AppScale.k)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassSurface(radius: 22)
     }

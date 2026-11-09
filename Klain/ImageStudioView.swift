@@ -47,9 +47,9 @@ struct ImageStudioView: View {
                         if !store.isGeneratingImage && store.generatedImages.isEmpty { emptyGallery }
                         card { gallery }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 6)
-                    .padding(.bottom, 210)
+                    .padding(.horizontal, 16 * AppScale.k)
+                    .padding(.top, 6 * AppScale.k)
+                    .padding(.bottom, 210 * AppScale.k)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .safeAreaInset(edge: .bottom) { composer }
@@ -97,37 +97,37 @@ struct ImageStudioView: View {
             HStack(spacing: 8) {
                 Circle()
                     .fill(store.providers.isEmpty ? Color.secondary : GlassPalette.mint)
-                    .frame(width: 7, height: 7)
+                    .frame(width: 7 * AppScale.k, height: 7 * AppScale.k)
                 Text(store.providers.isEmpty ? "API не настроен" : "API подключён")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
             Text("Image Studio")
-                .font(.system(size: 30, weight: .heavy, design: .rounded))
+                .font(.system(size: 30 * AppScale.k, weight: .heavy, design: .rounded))
             Text("Опиши идею — модель нарисует её.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .padding(.bottom, 2)
+        .padding(.bottom, 2 * AppScale.k)
     }
 
     private var emptyGallery: some View {
         VStack(spacing: 10) {
             Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 34, weight: .light))
+                .font(.system(size: 34 * AppScale.k, weight: .light))
                 .foregroundStyle(.secondary)
             Text("Здесь появятся сгенерированные изображения.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 34)
+        .padding(.vertical, 34 * AppScale.k)
         .glassSurface(radius: 24)
     }
 
     private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .padding(14)
+            .padding(14 * AppScale.k)
             .glassSurface(radius: 22)
     }
 
@@ -162,20 +162,20 @@ struct ImageStudioView: View {
                 .resizable()
                 .scaledToFill()
                 .frame(minWidth: 0, maxWidth: .infinity)
-                .frame(height: 120)
+                .frame(height: 120 * AppScale.k)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
                 .overlay(alignment: .bottomLeading) {
                     Text(item.model)
-                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 8 * AppScale.k, weight: .semibold, design: .monospaced))
                         .lineLimit(1)
                         .foregroundStyle(.primary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.black.opacity(0.35), in: Capsule())
-                        .padding(6)
+                        .padding(.horizontal, 6 * AppScale.k)
+                        .padding(.vertical, 3 * AppScale.k)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(6 * AppScale.k)
                 }
-                .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
                 .onTapGesture { selected = item }
                 .contextMenu {
                     Button { Task { @MainActor in await save(item) } } label: {
@@ -203,16 +203,16 @@ struct ImageStudioView: View {
                         .resizable()
                         .scaledToFill()
                         .frame(maxWidth: .infinity)
-                        .frame(height: 150)
+                        .frame(height: 150 * AppScale.k)
                         .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 18 * AppScale.k, style: .continuous))
                         .overlay(alignment: .topTrailing) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11 * AppScale.k, weight: .bold))
                                 .foregroundStyle(.primary)
-                                .padding(6)
-                                .background(.black.opacity(0.35), in: Circle())
-                                .padding(8)
+                                .padding(6 * AppScale.k)
+                                .background(.ultraThinMaterial, in: Circle())
+                                .padding(8 * AppScale.k)
                         }
                 }
                 .buttonStyle(.plain)
@@ -287,11 +287,10 @@ struct ImageStudioView: View {
                 }
             }
         }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .padding(.horizontal, 12)
-        .padding(.bottom, 10)
-        .padding(.top, 6)
+        .padding(14 * AppScale.k)
+        .padding(.horizontal, 12 * AppScale.k)
+        .padding(.bottom, 10 * AppScale.k)
+        .padding(.top, 6 * AppScale.k)
         .id("composer")
     }
 
@@ -304,23 +303,23 @@ struct ImageStudioView: View {
                 if !store.currentImagePrompt.isEmpty {
                     Text(store.currentImagePrompt)
                         .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
-                        .padding(6).background(.black.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .padding(6 * AppScale.k).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8 * AppScale.k, style: .continuous))
                 }
             }
             Spacer()
         }
-        .padding(10)
-        .background(Palette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(10 * AppScale.k)
+        .background(Palette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 14 * AppScale.k, style: .continuous))
     }
 
     private func chipLabel(systemImage: String, text: String) -> some View {
         HStack(spacing: 5) {
-            Image(systemName: systemImage).font(.system(size: 10, weight: .semibold))
+            Image(systemName: systemImage).font(.system(size: 10 * AppScale.k, weight: .semibold))
             Text(text).lineLimit(1)
         }
-        .font(.system(size: 11, weight: .medium, design: .rounded))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .font(.system(size: 11 * AppScale.k, weight: .medium, design: .rounded))
+        .padding(.horizontal, 10 * AppScale.k)
+        .padding(.vertical, 7 * AppScale.k)
         .glassCapsule()
     }
 
@@ -380,8 +379,7 @@ struct ImagePreviewSheet: View {
             }
             .navigationTitle(image.model)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Material.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Закрыть") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

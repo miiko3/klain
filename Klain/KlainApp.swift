@@ -1,5 +1,19 @@
 import SwiftUI
 
+// Global UI scale multiplier. Read straight from UserDefaults so every fixed
+// size (.system(size:), .frame, .padding, cornerRadius) scales TOGETHER with
+// the text — not only Dynamic Type fonts. KlainApp forces a rebuild on change.
+enum AppScale {
+    static var k: CGFloat {
+        switch UserDefaults.standard.string(forKey: "klain.uiScale") ?? "normal" {
+        case "small": return 0.85
+        case "large": return 1.18
+        case "xlarge": return 1.35
+        default: return 1
+        }
+    }
+}
+
 @main
 struct KlainApp: App {
     @StateObject private var store = ChatStore()
@@ -22,6 +36,8 @@ struct KlainApp: App {
                 .environmentObject(store)
                 .dynamicTypeSize(typeSize)
                 .preferredColorScheme(scheme == "light" ? .light : .dark)
+                // Rebuild the whole tree so AppScale.k (fixed sizes) re-applies.
+                .id("\(scheme)-\(uiScale)")
         }
     }
 }
