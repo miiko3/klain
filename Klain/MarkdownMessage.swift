@@ -161,6 +161,7 @@ struct MDBlockView: View {
                 VStack(alignment: .leading, spacing: 4) { ForEach(Array(blocks.enumerated()), id: \.offset) { _, b in MDBlockView(block: b) } }
             }.padding(.vertical, 4 * AppScale.k)
         case .rule:
+            EmptyView()
         case .list(let ordered, let items):
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
