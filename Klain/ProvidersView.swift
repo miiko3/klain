@@ -88,9 +88,10 @@ struct ProvidersView: View {
                 }
             }
             .glassContainer()
-            .navigationTitle("Провайдеры")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) { TitleCapsule(title: "Провайдеры") }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
                 }
@@ -196,9 +197,10 @@ struct ProviderEditor: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .glassContainer()
-            .navigationTitle(provider.name.isEmpty ? "Новый провайдер" : provider.name)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) { TitleCapsule(title: provider.name.isEmpty ? "Новый провайдер" : provider.name) }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Назад") { dismiss() }
                 }

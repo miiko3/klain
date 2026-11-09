@@ -59,9 +59,10 @@ struct ImageStudioView: View {
             }
         }
         .glassContainer()
-        .navigationTitle("Картинки")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) { TitleCapsule(title: "Картинки") }
             // "Назад" stays system-provided (untouched).
             ToolbarItem(placement: .topBarTrailing) {
                 Button { settings = true } label: {
@@ -169,18 +170,8 @@ struct ImageStudioView: View {
                 .frame(height: 120 * AppScale.k)
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
-                .overlay(alignment: .bottomLeading) {
-                    // Model name in its own glass capsule so it never melts
-                    // into the photo.
-                    Text(item.model)
-                        .font(.system(size: 8 * AppScale.k, weight: .semibold, design: .monospaced))
-                        .lineLimit(1)
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 8 * AppScale.k)
-                        .padding(.vertical, 4 * AppScale.k)
-                        .glassCapsule()
-                        .padding(8 * AppScale.k)
-                }
+                // No model label on the photo: it was showing above the header
+                // and duplicating the model chip in the composer.
                 .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
                 .onTapGesture { selected = item }
                 .contextMenu {
@@ -223,87 +214,54 @@ struct ImageStudioView: View {
                 .buttonStyle(.plain)
             }
 
-            if !store.providers.isEmpty {
-                HStack(spacing: 8 * AppScale.k) {
-                    Menu {
-                        ForEach(store.providers) { p in
-                            Button { providerID = p.id } label: {
-                                if provider?.id == p.id { Label(p.name, systemImage: "checkmark") } else { Text(p.name) }
-                            }
+            // Same GlassComposer component as the AI chat — literally one design.
+            GlassComposer(
+                radius: 26,
+                placeholder: "Опиши изображение…",
+                text: $prompt,
+                isSending: store.isGeneratingImage,
+                sendEnabled: canGenerate,
+                onSend: { generate() },
+                onStop: { store.cancelImageGeneration() },
+                onAttach: { settings = true }
+            ) {
+                Menu {
+                    ForEach(store.providers) { p in
+                        Button { providerID = p.id } label: {
+                            if provider?.id == p.id { Label(p.name, systemImage: "checkmark") } else { Text(p.name) }
                         }
-                    } label: {
-                        GlassChip(icon: "server.rack") { Text(provider?.name ?? "Провайдер") }
                     }
-
-                    Menu {
-                        ForEach(imageModels) { entry in
-                            Button { chooseModel(entry.id) } label: {
-                                if model == entry.id { Label(entry.name, systemImage: "checkmark") } else { Text(entry.name) }
-                            }
-                        }
-                    } label: {
-                        GlassChip(icon: "sparkles") { Text(displayName) }
-                    }
-
-                    Menu {
-                        ForEach(ImageModelCatalog.sizes, id: \.self) { value in
-                            Button { size = value } label: {
-                                if size == value { Label(value, systemImage: "checkmark") } else { Text(value) }
-                            }
-                        }
-                    } label: {
-                        GlassChip(icon: "aspectratio") { Text(size) }
-                    }
+                } label: {
+                    GlassChip(icon: "server.rack") { Text(provider?.name ?? "Провайдер") }
                 }
-                .padding(.horizontal, 4 * AppScale.k)
-            }
-
-            // Same composer component as the AI chat: one glass block with
-            // the prompt field and a round glass generate button.
-            HStack(alignment: .bottom, spacing: 10 * AppScale.k) {
+                Menu {
+                    ForEach(imageModels) { entry in
+                        Button { chooseModel(entry.id) } label: {
+                            if model == entry.id { Label(entry.name, systemImage: "checkmark") } else { Text(entry.name) }
+                        }
+                    }
+                } label: {
+                    GlassChip(icon: "sparkles") { Text(displayName) }
+                }
+                Menu {
+                    ForEach(ImageModelCatalog.sizes, id: \.self) { value in
+                        Button { size = value } label: {
+                            if size == value { Label(value, systemImage: "checkmark") } else { Text(value) }
+                        }
+                    }
+                } label: {
+                    GlassChip(icon: "aspectratio") { Text(size) }
+                }
+            } field: {
                 TextField("Опиши изображение…", text: $prompt, axis: .vertical)
                     .lineLimit(2...6)
                     .focused($focused)
                     .foregroundStyle(.primary)
                     .tint(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    // Hide the editor during generation: the request is shown
-                    // once, inside generatingRow.
                     .opacity(store.isGeneratingImage ? 0 : 1)
                     .frame(maxHeight: store.isGeneratingImage ? 0 : nil)
                     .disabled(store.isGeneratingImage)
-
-                if store.providers.isEmpty {
-                    Button { settings = true } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16 * AppScale.k, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 38 * AppScale.k, height: 38 * AppScale.k)
-                            .glassCircle()
-                    }
-                } else if store.isGeneratingImage {
-                    Button { store.cancelImageGeneration() } label: {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 13 * AppScale.k, weight: .bold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 38 * AppScale.k, height: 38 * AppScale.k)
-                            .glassCircle()
-                    }
-                } else {
-                    Button { generate() } label: {
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: 16 * AppScale.k, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 38 * AppScale.k, height: 38 * AppScale.k)
-                            .glassCircle()
-                    }
-                    .disabled(!canGenerate)
-                    .opacity(canGenerate ? 1 : 0.4)
-                }
             }
-            .padding(.horizontal, 12 * AppScale.k)
-            .padding(.vertical, 8 * AppScale.k)
-            .glassSurface(radius: 26 * AppScale.k)
         }
         .padding(.horizontal, 12 * AppScale.k)
         .padding(.bottom, 10 * AppScale.k)
@@ -317,11 +275,7 @@ struct ImageStudioView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Генерирую…").font(.system(.subheadline, design: .rounded).weight(.semibold))
                 Text("Обычно 10–60 секунд").font(.caption2).foregroundStyle(.secondary)
-                if !store.currentImagePrompt.isEmpty {
-                    Text(store.currentImagePrompt)
-                        .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
-                        .padding(6 * AppScale.k)
-                }
+                // No prompt echo here: it duplicated the request text on screen.
             }
             Spacer()
         }
@@ -383,9 +337,10 @@ struct ImagePreviewSheet: View {
                 }
             }
             .glassContainer()
-            .navigationTitle(image.model)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) { TitleCapsule(title: image.model) }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Закрыть") { dismiss() }
                 }

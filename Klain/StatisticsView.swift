@@ -88,9 +88,10 @@ struct StatisticsView: View {
                 .scrollIndicators(.hidden)
             }
             .glassContainer()
-            .navigationTitle("Статистика")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) { TitleCapsule(title: "Статистика") }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
                 }

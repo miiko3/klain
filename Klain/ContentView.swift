@@ -126,6 +126,7 @@ struct ContentView: View {
         .glassContainer()
         .navigationTitle("klain")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom) { homeMenu }
     }
     private var homeMenu: some View {
@@ -177,9 +178,10 @@ struct ContentView: View {
             .scrollContentBackground(.hidden)
         }
         .glassContainer()
-        .navigationTitle("Чаты")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) { TitleCapsule(title: "Чаты") }
             if !store.activeChats.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { store.newChat(); if let id = store.selectedChatID { path.append(.chat(id)) } } label: { Label("Новый чат", systemImage: "square.and.pencil") }.disabled(store.isSending)
@@ -265,6 +267,7 @@ struct ContentView: View {
                                     .foregroundStyle(.primary)
                                     .padding(.horizontal, 14 * AppScale.k)
                                     .padding(.vertical, 9 * AppScale.k)
+                                    .glassCapsule()
                             }.padding(.bottom, 6 * AppScale.k)
                         }
                     }
@@ -273,9 +276,10 @@ struct ContentView: View {
             }
         }
         .glassContainer()
-        .navigationTitle(store.selectedChat?.title ?? "Новый чат")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) { TitleCapsule(title: store.selectedChat?.title ?? "Новый чат") }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { stats = true } label: {
                     Image(systemName: "chart.bar")

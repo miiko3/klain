@@ -86,3 +86,17 @@ struct GlassChip<Label: View>: View {
         .glassCapsule()
     }
 }
+
+// MARK: - Screen title in its own glass capsule (.principal toolbar item).
+struct TitleCapsule: View {
+    let title: String
+    var body: some View {
+        Text(title)
+            .font(.system(size: 16 * AppScale.k, weight: .semibold, design: .rounded))
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .padding(.horizontal, 18 * AppScale.k)
+            .padding(.vertical, 9 * AppScale.k)
+            .glassCapsule()
+    }
+}

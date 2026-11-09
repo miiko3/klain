@@ -79,9 +79,10 @@ struct SettingsScreen: View {
             }
         }
         .glassContainer()
-        .navigationTitle("Настройки")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) { TitleCapsule(title: "Настройки") }
         }
         .sheet(isPresented: $providers) { ProvidersView() }
         .sheet(isPresented: $stats) { StatisticsView() }
