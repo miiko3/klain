@@ -1,23 +1,18 @@
 import SwiftUI
 import Combine
 
-// MARK: - Palette: neutral, adaptive (semantic only, never a plate).
+// MARK: - Palette: neutral & adaptive (semantic colors only).
 enum GlassPalette {
     static let accent = Color.primary
     static let accent2 = Color.secondary
     static let violet = Color.secondary
     static let cyan = Color.primary
     static let mint = Color.secondary
-
-    static var accentGradient: LinearGradient {
-        LinearGradient(colors: [Color.primary, Color.secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-    static var coolGradient: LinearGradient {
-        LinearGradient(colors: [Color.secondary.opacity(0.5), Color.primary.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
 }
 
-// MARK: - Ambient screen background ONLY. No UI-element backplates anywhere.
+// MARK: - Ambient screen background. Everything else renders on top of it
+// WITHOUT plates: text and SF Symbols directly on the background, while the
+// navigation bar / toolbar keep the stock iOS 26 Liquid Glass appearance.
 struct LiquidBackground: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -25,10 +20,10 @@ struct LiquidBackground: View {
     var body: some View {
         ZStack {
             (colorScheme == .dark ? Color.black : Color.white)
-            Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.035))
+            Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.045 : 0.035))
                 .frame(width: 380 * AppScale.k, height: 380 * AppScale.k).blur(radius: 100)
                 .offset(x: drift ? 120 : -140, y: drift ? -260 : -160)
-            Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.03))
+            Circle().fill(Color.primary.opacity(colorScheme == .dark ? 0.035 : 0.03))
                 .frame(width: 300 * AppScale.k, height: 300 * AppScale.k).blur(radius: 110)
                 .offset(x: drift ? -140 : 160, y: drift ? 300 : 220)
         }
@@ -40,28 +35,67 @@ struct LiquidBackground: View {
     }
 }
 
-// MARK: - NO-OP glass modifiers.
-// The design intentionally has zero backplates / borders / separators under
-// any UI element. These helpers exist only so legacy call sites stay valid.
-struct GlassSurface: ViewModifier {
-    @ScaledMetric(relativeTo: .body) var radius: CGFloat = 22
-    var tint: Color = .clear
-    var interactive = true
-    func body(content: Content) -> some View { content }
-}
-
 extension View {
-    func glassContainer() -> some View { self }
+    /// Lets the system Liquid Glass (navigation bar, toolbar, controls) merge
+    /// and refract properly on iOS 26+.
+    @ViewBuilder
+    func glassContainer() -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer { self }
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
 
-    func glassSurface(radius: CGFloat = 22, tint: Color = .clear) -> some View { self }
-    func glassCapsule(tint: Color = .clear) -> some View { self }
-    func glassCapsuleFallback() -> some View { self }
-    func capsuleGlass() -> some View { self }
-    func glassRounded(_ radius: CGFloat = 16, style: RoundedCornerStyle = .continuous) -> some View { self }
-    func glassCircle() -> some View { self }
+    /// Real system Liquid Glass capsule (iOS 26+). Falls back to a plain
+    /// material on older systems.
+    @ViewBuilder
+    func glassCapsule(tint: Color = .clear) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.tint(tint).interactive(), in: Capsule())
+        } else {
+            self.background(.ultraThinMaterial, in: Capsule())
+        }
+        #else
+        self.background(.ultraThinMaterial, in: Capsule())
+        #endif
+    }
+
+    /// Real system Liquid Glass rounded rectangle.
+    @ViewBuilder
+    func glassSurface(radius: CGFloat = 22, tint: Color = .clear) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.tint(tint).interactive(), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        } else {
+            self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
+        #else
+        self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        #endif
+    }
+
+    /// Circular glass button (Telegram / iOS 26 style).
+    @ViewBuilder
+    func glassCircle() -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: Circle())
+        } else {
+            self.background(.ultraThinMaterial, in: Circle())
+        }
+        #else
+        self.background(.ultraThinMaterial, in: Circle())
+        #endif
+    }
 }
 
-// MARK: - Buttons: text only, no background.
+// MARK: - Buttons: system glass capsule, prominent = tinted lens.
 struct GlassButtonStyle: ButtonStyle {
     var prominent = false
     @ScaledMetric(relativeTo: .body) private var hPad: CGFloat = 18
@@ -69,23 +103,12 @@ struct GlassButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.body, design: .rounded).weight(.semibold))
-            .foregroundStyle(prominent ? Color.primary : Color.secondary)
+            .foregroundStyle(.primary)
             .padding(.horizontal, hPad).padding(.vertical, vPad)
             .frame(maxWidth: prominent ? .infinity : nil)
+            .glassCapsule(tint: prominent ? Color.primary.opacity(0.12) : .clear)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.28, dampingFraction: 0.72), value: configuration.isPressed)
-    }
-}
-
-struct GlassIconButtonStyle: ButtonStyle {
-    var tint: Color = GlassPalette.accent
-    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 40
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(.body, design: .rounded).weight(.semibold))
-            .foregroundStyle(.primary)
-            .frame(width: size, height: size)
-            .scaleEffect(configuration.isPressed ? 0.94 : 1)
     }
 }
 
@@ -112,6 +135,5 @@ struct VisionBadge: View {
         Label(compact ? "фото" : "видит фото", systemImage: "camera.viewfinder")
             .font(.system(.caption2, design: .rounded).weight(.bold))
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 7 * AppScale.k).padding(.vertical, 3 * AppScale.k)
     }
 }

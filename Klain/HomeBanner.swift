@@ -15,7 +15,6 @@ struct HomeBanner: View {
                     Image(systemName: "arrow.up.right").foregroundStyle(.secondary)
                 }
                 .padding(16 * AppScale.k)
-                .glassSurface(radius: 22)
             }
             .buttonStyle(.plain)
         }
@@ -36,7 +35,6 @@ struct SigningReminder: View {
                 Button("Я обновил приложение") { start = Date().timeIntervalSince1970; confirmReset = true }.font(.caption).buttonStyle(.borderless)
             }
             .padding(16 * AppScale.k)
-            .glassSurface(radius: 22)
         }.onAppear { if start == 0 { start = Date().timeIntervalSince1970 } }
             .alert("Таймер обновлён", isPresented: $confirmReset) { Button("Понятно", role: .cancel) {} } message: { Text("Начат новый отсчёт на 7 дней. Эта кнопка не продлевает подпись приложения.") }
     }

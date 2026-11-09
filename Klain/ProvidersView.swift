@@ -83,7 +83,6 @@ struct ProvidersView: View {
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(16 * AppScale.k)
-                            .glassSurface(radius: 22, tint: GlassPalette.accent)
                     }
                     .padding(16 * AppScale.k)
                 }
@@ -94,6 +93,7 @@ struct ProvidersView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
+                        .glassCapsule()
                 }
             }
             .sheet(item: $editing) { ProviderEditor(provider: $0) }
@@ -112,7 +112,6 @@ struct ProvidersView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14 * AppScale.k)
-        .glassSurface(radius: 24, tint: tint)
     }
 
     private func empty(_ text: String) -> some View {
@@ -184,7 +183,6 @@ struct ProviderEditor: View {
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(16 * AppScale.k)
-                            .glassSurface(radius: 22, tint: GlassPalette.accent2)
                         if !error.isEmpty {
                             Text(error)
                                 .font(.caption)
@@ -204,9 +202,11 @@ struct ProviderEditor: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Назад") { dismiss() }
+                        .glassCapsule()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Сохранить", action: save)
+                        .glassCapsule()
                         .disabled(loading || store.isSending)
                 }
             }
@@ -362,7 +362,6 @@ struct ProviderEditor: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14 * AppScale.k)
-        .glassSurface(radius: 24, tint: tint)
     }
     private func fieldBox<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()

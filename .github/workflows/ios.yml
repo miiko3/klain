@@ -6,7 +6,7 @@ on:
       version:
         description: 'Marketing version'
         required: false
-        default: '0.7.0'
+        default: '0.7.1'
   push:
     branches: [main, 'build/0.6-alpha']
     tags: ['v*']
@@ -48,7 +48,7 @@ jobs:
 
       - name: Package unsigned IPA
         run: |
-          VERSION="${{ github.event.inputs.version || '0.7.0' }}"
+          VERSION="${{ github.event.inputs.version || '0.7.1' }}"
           mkdir -p build/package/Payload build/out
           cp -R build/Klain.xcarchive/Products/Applications/Klain.app build/package/Payload/
           cd build/package

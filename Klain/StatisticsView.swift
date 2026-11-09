@@ -89,6 +89,7 @@ struct StatisticsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
+                        .glassCapsule()
                 }
             }
         }
@@ -109,7 +110,6 @@ struct StatisticsView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(16 * AppScale.k)
-        .glassSurface(radius: 22, tint: GlassPalette.accent)
     }
 
     private var modelsCard: some View {
@@ -132,7 +132,6 @@ struct StatisticsView: View {
             }
         }
         .padding(16 * AppScale.k)
-        .glassSurface(radius: 22, tint: GlassPalette.violet)
     }
 
     private var chatsCard: some View {
@@ -155,7 +154,6 @@ struct StatisticsView: View {
             }
         }
         .padding(16 * AppScale.k)
-        .glassSurface(radius: 22, tint: GlassPalette.cyan)
     }
 
     private var limitsCard: some View {
@@ -185,7 +183,6 @@ struct StatisticsView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(16 * AppScale.k)
-        .glassSurface(radius: 22, tint: GlassPalette.mint)
     }
 
     private func cardHeader(icon: String, color: Color, title: String, subtitle: String?) -> some View {

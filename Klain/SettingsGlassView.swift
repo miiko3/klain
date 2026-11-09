@@ -73,7 +73,6 @@ struct SettingsScreen: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16 * AppScale.k)
-                    .glassSurface(radius: 22, tint: GlassPalette.violet)
                 }
                 .padding(.horizontal, 18 * AppScale.k)
                 .padding(.vertical, 16 * AppScale.k)
@@ -98,7 +97,6 @@ struct SettingsScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14 * AppScale.k)
-        .glassSurface(radius: 22, tint: tint)
     }
 }
 

@@ -106,11 +106,9 @@ struct ContentView: View {
             LiquidBackground()
             ScrollView {
                 VStack(spacing: 14 * AppScale.k) {
-                    // Large native title area (no custom capsule, no gray plate).
+                    // Native large title comes from .navigationTitle below;
+                    // here we only place the brand mark on the trailing side.
                     HStack {
-                        Text("klain")
-                            .font(.system(size: 34 * AppScale.k, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
                         Spacer()
                         Image("BrandLogo")
                             .resizable().scaledToFit()
@@ -137,17 +135,18 @@ struct ContentView: View {
             menuButton("Картинки", icon: "sparkles", action: { path.append(.images) })
             menuButton("Настройки", icon: "slider.horizontal.3", action: { path.append(.settings) })
         }
-        .padding(.vertical, 8 * AppScale.k)
-        // One unified translucent capsule block (same style everywhere).
-        .capsuleGlass()
+        .padding(.horizontal, 6 * AppScale.k)
+        .padding(.vertical, 10 * AppScale.k)
+        // Floating system-glass bar (Telegram / iOS 26 style).
+        .glassCapsule()
         .padding(.horizontal, 16 * AppScale.k)
         .padding(.bottom, 22 * AppScale.k)
     }
     private func menuButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 6 * AppScale.k) {
+            VStack(spacing: 5 * AppScale.k) {
                 Image(systemName: icon)
-                    .font(.system(size: 20 * AppScale.k, weight: .light))
+                    .font(.system(size: 22 * AppScale.k, weight: .light))
                     .foregroundStyle(.primary)
                 Text(title)
                     .font(.system(size: 12 * AppScale.k, weight: .regular, design: .rounded))
@@ -156,7 +155,7 @@ struct ContentView: View {
                     .minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 6 * AppScale.k)
+            .padding(.vertical, 4 * AppScale.k)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -202,7 +201,6 @@ struct ContentView: View {
                     Image(systemName: "chevron.right").font(.system(size: 11 * AppScale.k, weight: .semibold)).foregroundStyle(.tertiary)
                 }
                 .padding(14 * AppScale.k)
-                .glassSurface(radius: 18)
             }
             .buttonStyle(.plain)
             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
@@ -223,7 +221,6 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 30 * AppScale.k)
         .padding(.horizontal, 18 * AppScale.k)
-        .glassSurface(radius: 22)
     }
     private var settingsList: some View {
         SettingsScreen(openImages: { path.append(.images) })
@@ -243,7 +240,8 @@ struct ContentView: View {
                             Color.clear.frame(height: 1 * AppScale.k).id("bottom")
                         }
                         .padding(.horizontal, 18 * AppScale.k)
-                        .padding(.vertical, 14 * AppScale.k)
+                        .padding(.top, 12 * AppScale.k)
+                        .padding(.bottom, 14 * AppScale.k)
                         .background(GeometryReader { geo in
                             Color.clear.preference(key: ChatBottomPrefKey.self,
                                 value: geo.frame(in: .named("chatScroll")).maxY)
@@ -269,7 +267,6 @@ struct ContentView: View {
                                     .foregroundStyle(.primary)
                                     .padding(.horizontal, 14 * AppScale.k)
                                     .padding(.vertical, 9 * AppScale.k)
-                                    .capsuleGlass()
                             }.padding(.bottom, 6 * AppScale.k)
                         }
                     }
@@ -315,7 +312,6 @@ struct ContentView: View {
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, minHeight: 260, alignment: .center)
         .padding(24 * AppScale.k)
-        .glassSurface(radius: 24)
     }
     private var modelMenu: some View {
         Menu {
@@ -343,8 +339,9 @@ struct ContentView: View {
                 Image(systemName: "chevron.down").font(.caption2)
             }
             .font(.system(.caption, design: .monospaced))
-            .padding(10 * AppScale.k)
-            .capsuleGlass()
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4 * AppScale.k)
+            .padding(.vertical, 6 * AppScale.k)
         }
         .disabled(store.isSending)
     }
@@ -359,8 +356,9 @@ struct ContentView: View {
             } label: {
                 Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
                     .font(.caption)
-                    .padding(10 * AppScale.k)
-                    .capsuleGlass()
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4 * AppScale.k)
+                    .padding(.vertical, 6 * AppScale.k)
             }.disabled(store.isSending)
             Button {
                 store.setWebSearch(store.selectedChat?.webSearch != true)
@@ -368,7 +366,6 @@ struct ContentView: View {
                 Label("Сеть", systemImage: "globe")
                     .font(.caption)
                     .padding(10 * AppScale.k)
-                    .capsuleGlass()
                     .foregroundStyle(.primary)
             }
                 .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
@@ -391,13 +388,17 @@ struct ContentView: View {
             }
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7)
                 .foregroundStyle(.primary).tint(.primary)
+                .padding(.horizontal, 16 * AppScale.k)
+                .padding(.vertical, 11 * AppScale.k)
+                // Floating glass input field (Telegram / iOS 26 style).
+                .glassCapsule()
             if let reason = store.imageSupportWarning(for: attachments) {
                 Label(reason, systemImage: "exclamationmark.triangle")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: 8 * AppScale.k) {
                 Menu {
                     Button("Файлы", systemImage: "folder") { importing = true }
                     Button("Галерея", systemImage: "photo.on.rectangle") { gallery = true }
@@ -405,15 +406,20 @@ struct ContentView: View {
                         if UIImagePickerController.isSourceTypeAvailable(.camera) { camera = true } else { error = "Камера недоступна" }
                     }
                 } label: {
-                    Image(systemName: "paperclip").frame(width: 34 * AppScale.k, height: 34 * AppScale.k).capsuleGlass()
+                    Image(systemName: "paperclip")
+                        .font(.system(size: 17 * AppScale.k, weight: .light))
+                        .foregroundStyle(.primary)
+                        .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
+                        .glassCircle()
                 }
                 Spacer()
                 if store.isSending {
                     Button { store.stop() } label: {
                         Image(systemName: "stop")
-                            .font(.system(size: 13 * AppScale.k, weight: .regular))
+                            .font(.system(size: 14 * AppScale.k, weight: .regular))
                             .foregroundStyle(.primary)
-                            .frame(width: 34 * AppScale.k, height: 34 * AppScale.k)
+                            .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
+                            .glassCircle()
                     }
                 } else {
                     Button {
@@ -428,9 +434,10 @@ struct ContentView: View {
                         store.start(text, attachments: files)
                     } label: {
                         Image(systemName: "arrow.up")
-                            .fontWeight(.regular)
+                            .font(.system(size: 16 * AppScale.k, weight: .regular))
                             .foregroundStyle(Color.primary)
-                            .frame(width: 34 * AppScale.k, height: 34 * AppScale.k)
+                            .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
+                            .glassCircle()
                     }
                     .disabled(
                         store.activeProvider == nil
@@ -441,10 +448,9 @@ struct ContentView: View {
                 }
             }
         }
-        .padding(14 * AppScale.k)
-        // One unified translucent capsule block (reference photo 5 style).
-        .capsuleGlass()
-        .padding(12 * AppScale.k)
+        .padding(.horizontal, 16 * AppScale.k)
+        .padding(.bottom, 10 * AppScale.k)
+        .padding(.top, 4 * AppScale.k)
     }
     private func importFiles(_ result: Result<[URL], Error>) {
         do {
@@ -605,8 +611,7 @@ struct MessageView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(16 * AppScale.k)
+        .padding(.vertical, 6 * AppScale.k)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(radius: 22)
     }
 }
