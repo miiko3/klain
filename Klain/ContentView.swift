@@ -197,7 +197,6 @@ struct ContentView: View {
                         Text(chat.model).font(.system(size: 10 * AppScale.k, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.system(size: 11 * AppScale.k, weight: .semibold)).foregroundStyle(.tertiary)
                 }
                 .padding(14 * AppScale.k)
             }
@@ -329,50 +328,17 @@ struct ContentView: View {
             }
             Button("Настроить модели…") { settings = true }
         } label: {
-            HStack(spacing: 6) {
-                if store.selectedModelEntry?.supportsVision == true {
-                    Image(systemName: "camera.viewfinder").font(.caption2)
+            GlassChip(icon: store.selectedModelEntry?.supportsVision == true ? "camera.viewfinder" : nil) {
+                HStack(spacing: 5 * AppScale.k) {
+                    Text(store.selectedChat?.model ?? "Выбрать модель").lineLimit(1)
+                    Image(systemName: "chevron.down").font(.system(size: 9 * AppScale.k, weight: .semibold))
                 }
-                Text(store.selectedChat?.model ?? "Выбрать модель").lineLimit(1)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.down").font(.caption2)
             }
-            .font(.system(.caption, design: .monospaced))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 4 * AppScale.k)
-            .padding(.vertical, 6 * AppScale.k)
         }
         .disabled(store.isSending)
     }
-    // Reasoning + web controls now live INSIDE the composer, above the text field.
-    private var chatControls: some View {
-        HStack(spacing: 8 * AppScale.k) {
-            modelMenu
-            Menu {
-                ForEach(["default", "low", "medium", "high", "xhigh", "max"], id: \.self) { level in
-                    Button { store.setReasoning(level) } label: { Label(level == "xhigh" ? "xHigh" : level.capitalized, systemImage: store.selectedChat?.reasoning == level ? "checkmark" : "brain") }
-                }
-            } label: {
-                Label((store.selectedChat?.reasoning ?? "default").capitalized, systemImage: "brain")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 4 * AppScale.k)
-                    .padding(.vertical, 6 * AppScale.k)
-            }.disabled(store.isSending)
-            Button {
-                store.setWebSearch(store.selectedChat?.webSearch != true)
-            } label: {
-                Label("Сеть", systemImage: "globe")
-                    .font(.caption)
-                    .padding(10 * AppScale.k)
-                    .foregroundStyle(.primary)
-            }
-                .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
-        }
-    }
     private var composer: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            chatControls
+        VStack(alignment: .leading, spacing: 10 * AppScale.k) {
             if !attachments.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -385,71 +351,60 @@ struct ContentView: View {
                     .padding(.horizontal, 2 * AppScale.k)
                 }
             }
-            TextField("Напиши что-нибудь…", text: $input, axis: .vertical).lineLimit(1...7)
-                .foregroundStyle(.primary).tint(.primary)
-                .padding(.horizontal, 16 * AppScale.k)
-                .padding(.vertical, 11 * AppScale.k)
-                // Floating glass input field (Telegram / iOS 26 style).
             if let reason = store.imageSupportWarning(for: attachments) {
                 Label(reason, systemImage: "exclamationmark.triangle")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            HStack(spacing: 8 * AppScale.k) {
+
+            // Same composer component as Image Studio.
+            GlassComposer(
+                placeholder: "Напиши что-нибудь…",
+                text: $input,
+                isSending: store.isSending,
+                sendEnabled: store.activeProvider != nil
+                    && store.selectedChat?.model.isEmpty == false
+                    && (!input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty)
+                    && store.imageSupportError(for: attachments) == nil,
+                onSend: {
+                    if let reason = store.imageSupportError(for: attachments) { error = reason; return }
+                    let text = input
+                    let files = attachments
+                    input = ""
+                    attachments = []
+                    store.start(text, attachments: files)
+                },
+                onStop: { store.stop() },
+                onAttach: { importing = true }
+            ) {
+                // Control chips (model / reasoning / web) as separate capsules.
+                modelMenu
                 Menu {
-                    Button("Файлы", systemImage: "folder") { importing = true }
-                    Button("Галерея", systemImage: "photo.on.rectangle") { gallery = true }
-                    Button("Камера", systemImage: "camera") {
-                        if UIImagePickerController.isSourceTypeAvailable(.camera) { camera = true } else { error = "Камера недоступна" }
+                    ForEach(["default", "low", "medium", "high", "xhigh", "max"], id: \.self) { level in
+                        Button { store.setReasoning(level) } label: { Label(level == "xhigh" ? "xHigh" : level.capitalized, systemImage: store.selectedChat?.reasoning == level ? "checkmark" : "brain") }
                     }
                 } label: {
-                    Image(systemName: "paperclip")
-                        .font(.system(size: 17 * AppScale.k, weight: .light))
-                        .foregroundStyle(.primary)
-                        .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
-                        .glassCircle()
-                }
-                Spacer()
-                if store.isSending {
-                    Button { store.stop() } label: {
-                        Image(systemName: "stop")
-                            .font(.system(size: 14 * AppScale.k, weight: .regular))
-                            .foregroundStyle(.primary)
-                            .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
-                            .glassCircle()
+                    GlassChip(icon: "brain") {
+                        Text((store.selectedChat?.reasoning ?? "default").capitalized)
                     }
-                } else {
-                    Button {
-                        if let reason = store.imageSupportError(for: attachments) {
-                            error = reason
-                            return
-                        }
-                        let text = input
-                        let files = attachments
-                        input = ""
-                        attachments = []
-                        store.start(text, attachments: files)
-                    } label: {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 16 * AppScale.k, weight: .regular))
-                            .foregroundStyle(Color.primary)
-                            .frame(width: 40 * AppScale.k, height: 40 * AppScale.k)
-                            .glassCircle()
-                    }
-                    .disabled(
-                        store.activeProvider == nil
-                            || store.selectedChat?.model.isEmpty != false
-                            || (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty)
-                            || store.imageSupportError(for: attachments) != nil
-                    )
                 }
+                .disabled(store.isSending)
+                Button {
+                    store.setWebSearch(store.selectedChat?.webSearch != true)
+                } label: {
+                    GlassChip(icon: "globe") { Text("Сеть") }
+                }
+                .disabled(store.isSending).help("Веб-поиск выполняет провайдер")
+            } field: {
+                TextField("Напиши что-нибудь…", text: $input, axis: .vertical)
+                    .lineLimit(1...7)
+                    .foregroundStyle(.primary).tint(.primary)
             }
         }
         .padding(.horizontal, 16 * AppScale.k)
         .padding(.bottom, 10 * AppScale.k)
         .padding(.top, 4 * AppScale.k)
-        .glassSurface(radius: 24 * AppScale.k)
     }
     private func importFiles(_ result: Result<[URL], Error>) {
         do {

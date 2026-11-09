@@ -170,13 +170,16 @@ struct ImageStudioView: View {
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
                 .overlay(alignment: .bottomLeading) {
+                    // Model name in its own glass capsule so it never melts
+                    // into the photo.
                     Text(item.model)
                         .font(.system(size: 8 * AppScale.k, weight: .semibold, design: .monospaced))
                         .lineLimit(1)
                         .foregroundStyle(.primary)
-                        .padding(.horizontal, 6 * AppScale.k)
-                        .padding(.vertical, 3 * AppScale.k)
-                        .padding(6 * AppScale.k)
+                        .padding(.horizontal, 8 * AppScale.k)
+                        .padding(.vertical, 4 * AppScale.k)
+                        .glassCapsule()
+                        .padding(8 * AppScale.k)
                 }
                 .contentShape(RoundedRectangle(cornerRadius: 16 * AppScale.k, style: .continuous))
                 .onTapGesture { selected = item }
@@ -220,22 +223,8 @@ struct ImageStudioView: View {
                 .buttonStyle(.plain)
             }
 
-            TextField("Опиши изображение…", text: $prompt, axis: .vertical)
-                .lineLimit(2...6)
-                .focused($focused)
-                .foregroundStyle(.primary)
-                .tint(.primary)
-                // Floating glass input field (Telegram / iOS 26 style).
-                .padding(.horizontal, 16 * AppScale.k)
-                .padding(.vertical, 11 * AppScale.k)
-                // Hide the editor during generation: the request is shown once,
-                // inside generatingRow, so it never appears twice on screen.
-                .opacity(store.isGeneratingImage ? 0 : 1)
-                .frame(maxHeight: store.isGeneratingImage ? 0 : nil)
-                .disabled(store.isGeneratingImage)
-
             if !store.providers.isEmpty {
-                HStack(spacing: 8) {
+                HStack(spacing: 8 * AppScale.k) {
                     Menu {
                         ForEach(store.providers) { p in
                             Button { providerID = p.id } label: {
@@ -243,7 +232,7 @@ struct ImageStudioView: View {
                             }
                         }
                     } label: {
-                        chipLabel(systemImage: "server.rack", text: provider?.name ?? "Провайдер")
+                        GlassChip(icon: "server.rack") { Text(provider?.name ?? "Провайдер") }
                     }
 
                     Menu {
@@ -253,7 +242,7 @@ struct ImageStudioView: View {
                             }
                         }
                     } label: {
-                        chipLabel(systemImage: "sparkles", text: displayName)
+                        GlassChip(icon: "sparkles") { Text(displayName) }
                     }
 
                     Menu {
@@ -263,39 +252,59 @@ struct ImageStudioView: View {
                             }
                         }
                     } label: {
-                        chipLabel(systemImage: "aspectratio", text: size)
+                        GlassChip(icon: "aspectratio") { Text(size) }
                     }
                 }
+                .padding(.horizontal, 4 * AppScale.k)
             }
 
-            HStack(spacing: 8) {
-                if !prompt.isEmpty && !store.isGeneratingImage {
-                    Button("Очистить") { prompt = "" }
-                        .buttonStyle(.plain)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
+            // Same composer component as the AI chat: one glass block with
+            // the prompt field and a round glass generate button.
+            HStack(alignment: .bottom, spacing: 10 * AppScale.k) {
+                TextField("Опиши изображение…", text: $prompt, axis: .vertical)
+                    .lineLimit(2...6)
+                    .focused($focused)
+                    .foregroundStyle(.primary)
+                    .tint(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Hide the editor during generation: the request is shown
+                    // once, inside generatingRow.
+                    .opacity(store.isGeneratingImage ? 0 : 1)
+                    .frame(maxHeight: store.isGeneratingImage ? 0 : nil)
+                    .disabled(store.isGeneratingImage)
+
                 if store.providers.isEmpty {
-                    Button("Подключить API") { settings = true }
-                        .buttonStyle(GlassButtonStyle(prominent: true))
+                    Button { settings = true } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16 * AppScale.k, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 38 * AppScale.k, height: 38 * AppScale.k)
+                            .glassCircle()
+                    }
                 } else if store.isGeneratingImage {
                     Button { store.cancelImageGeneration() } label: {
-                        Label("Отменить", systemImage: "stop")
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 13 * AppScale.k, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 38 * AppScale.k, height: 38 * AppScale.k)
+                            .glassCircle()
                     }
-                    .buttonStyle(GlassButtonStyle())
                 } else {
                     Button { generate() } label: {
-                        Label("Сгенерировать", systemImage: "wand.and.stars")
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 16 * AppScale.k, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 38 * AppScale.k, height: 38 * AppScale.k)
+                            .glassCircle()
                     }
-                    .buttonStyle(GlassButtonStyle(prominent: true))
                     .disabled(!canGenerate)
+                    .opacity(canGenerate ? 1 : 0.4)
                 }
             }
+            .padding(.horizontal, 12 * AppScale.k)
+            .padding(.vertical, 8 * AppScale.k)
+            .glassSurface(radius: 26 * AppScale.k)
         }
-        .padding(14 * AppScale.k)
-        // One unified translucent capsule block (same as chat + home menu).
-        .glassSurface(radius: 26 * AppScale.k)
         .padding(.horizontal, 12 * AppScale.k)
         .padding(.bottom, 10 * AppScale.k)
         .padding(.top, 6 * AppScale.k)
@@ -317,18 +326,6 @@ struct ImageStudioView: View {
             Spacer()
         }
         .padding(10 * AppScale.k)
-    }
-
-    private func chipLabel(systemImage: String, text: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: systemImage).font(.system(size: 10 * AppScale.k, weight: .semibold))
-            Text(text).lineLimit(1)
-        }
-        .font(.system(size: 11 * AppScale.k, weight: .medium, design: .rounded))
-        .foregroundStyle(.primary)
-        .padding(.horizontal, 12 * AppScale.k)
-        .padding(.vertical, 8 * AppScale.k)
-        // Small floating glass chip (Telegram / iOS 26 style).
     }
 
     private func prepare() {

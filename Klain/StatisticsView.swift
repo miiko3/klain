@@ -71,11 +71,15 @@ struct StatisticsView: View {
             ZStack {
                 LiquidBackground()
                 ScrollView {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 16 * AppScale.k) {
                         totals
+                            .glassSurface(radius: 22 * AppScale.k)
                         modelsCard
+                            .glassSurface(radius: 22 * AppScale.k)
                         chatsCard
+                            .glassSurface(radius: 22 * AppScale.k)
                         limitsCard
+                            .glassSurface(radius: 22 * AppScale.k)
                     }
                     .padding(.horizontal, 16 * AppScale.k)
                     .padding(.top, 8 * AppScale.k)
@@ -212,14 +216,10 @@ struct StatisticsView: View {
 
     private func metric(title: String, value: String, icon: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 11 * AppScale.k, weight: .semibold))
-                    .foregroundStyle(.primary)
-                Text(title)
-                    .font(.system(size: 11 * AppScale.k, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
+            // No icon here: the section header already shows it.
+            Text(title)
+                .font(.system(size: 11 * AppScale.k, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
             Text(value)
                 .font(.system(size: 22 * AppScale.k, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
@@ -232,7 +232,7 @@ struct StatisticsView: View {
 
     private func row(color: Color, icon: String, title: String, subtitle: String, input: Int, output: Int, count: Int) -> some View {
         HStack(spacing: 12) {
-            iconCircle(icon, color: color)
+            // Icon removed: it duplicated the section header icon.
             VStack(alignment: .leading, spacing: 3) {
                 Text(title.isEmpty ? "Без названия" : title)
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -262,7 +262,7 @@ struct StatisticsView: View {
 
     private func providerRow(_ provider: Provider, color: Color) -> some View {
         HStack(spacing: 12) {
-            iconCircle("server.rack", color: color)
+            // Icon removed: it duplicated the section header icon.
             VStack(alignment: .leading, spacing: 3) {
                 Text(provider.name)
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
