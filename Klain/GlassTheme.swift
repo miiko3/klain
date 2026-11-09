@@ -66,6 +66,21 @@ extension View {
         #endif
     }
 
+    /// Composer glass: fully transparent system glass (no gray fill), so it
+    /// looks identical over a black chat background and over colorful photos.
+    @ViewBuilder
+    func composerGlass(radius: CGFloat = 24) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.clear.interactive(), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        } else {
+            self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
+        #else
+        self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        #endif
+    }
+
     /// Real system Liquid Glass rounded rectangle.
     @ViewBuilder
     func glassSurface(radius: CGFloat = 22, tint: Color = .clear) -> some View {

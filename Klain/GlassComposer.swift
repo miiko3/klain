@@ -59,7 +59,7 @@ struct GlassComposer<Controls: View, Field: View>: View {
             }
             .padding(.horizontal, 10 * AppScale.k)
             .padding(.vertical, 8 * AppScale.k)
-            .glassSurface(radius: radius * AppScale.k)
+            .composerGlass(radius: radius * AppScale.k)
         }
     }
 }
@@ -92,11 +92,12 @@ struct TitleCapsule: View {
     let title: String
     var body: some View {
         Text(title)
-            .font(.system(size: 16 * AppScale.k, weight: .semibold, design: .rounded))
+            // Same size/weight as the neighbouring system glass buttons.
+            .font(.system(size: 17 * AppScale.k, weight: .semibold, design: .rounded))
             .foregroundStyle(.primary)
             .lineLimit(1)
-            .padding(.horizontal, 18 * AppScale.k)
-            .padding(.vertical, 9 * AppScale.k)
+            .padding(.horizontal, 16 * AppScale.k)
+            .padding(.vertical, 8 * AppScale.k)
             .glassCapsule()
     }
 }

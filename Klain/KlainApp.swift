@@ -21,6 +21,21 @@ struct KlainApp: App {
     @AppStorage("klain.colorScheme") private var scheme: String = "dark"
     @AppStorage("klain.uiScale") private var uiScale: String = "normal"
 
+    init() {
+        // Kill EVERY translucent navigation-bar backplate (scrollEdge state
+        // included). The system glass buttons remain; only the plate goes away.
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = .clear
+        appearance.backgroundEffect = nil
+        appearance.shadowColor = .clear
+        appearance.shadowImage = nil
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().compactScrollEdgeAppearance = appearance
+    }
+
     private var typeSize: DynamicTypeSize {
         switch uiScale {
         case "small": return .small

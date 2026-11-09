@@ -106,8 +106,8 @@ struct ContentView: View {
             LiquidBackground()
             ScrollView {
                 VStack(spacing: 14 * AppScale.k) {
-                    // Native large title comes from .navigationTitle below;
-                    // here we only place the brand mark on the trailing side.
+                    // Only the brand mark at the top right; no native/duplicate
+                    // "klain" title above the ad banner.
                     HStack {
                         Spacer()
                         Image("BrandLogo")
@@ -124,8 +124,7 @@ struct ContentView: View {
             }
         }
         .glassContainer()
-        .navigationTitle("klain")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom) { homeMenu }
     }
