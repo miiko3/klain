@@ -53,38 +53,34 @@ enum KlainColors {
 struct Snowfall: View {
     @State private var animate = false
     private struct Flake: Identifiable {
-        let id = UUID()
-        var x: CGFloat, y: CGFloat, size: CGFloat, delay: Double, duration: Double, opacity: Double
+        let id: Int
+        let x: CGFloat
+        let size: CGFloat
+        let opacity: Double
     }
-    private let flakes: [Flake] = (0..<36).map { i in
-        Flake(
-            x: CGFloat((i * 37) % 100) / 100,
-            y: CGFloat((i * 53) % 100) / 100,
-            size: CGFloat(3 + (i % 5)),
-            delay: Double(i % 10) * 0.35,
-            duration: Double(6 + (i % 7)),
-            opacity: 0.25 + Double(i % 4) * 0.15
-        )
+    private let flakes: [Flake] = (0..<30).map { i in
+        Flake(id: i,
+              x: CGFloat((i * 37) % 100) / 100,
+              size: CGFloat(3 + (i % 4)),
+              opacity: 0.3 + Double(i % 3) * 0.15)
     }
     var body: some View {
         GeometryReader { geo in
             ForEach(flakes) { f in
                 Circle()
-                    .fill(.white)
+                    .fill(Color.white)
                     .frame(width: f.size, height: f.size)
                     .opacity(f.opacity)
                     .position(x: f.x * geo.size.width,
                               y: animate ? geo.size.height + 20 : -20)
-                    .animation(
-                        .linear(duration: f.duration)
-                            .repeatForever(autoreverses: false)
-                            .delay(f.delay),
-                        value: animate
-                    )
             }
         }
         .allowsHitTesting(false)
-        .onAppear { animate = true }
+        .onAppear {
+            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+                animate = true
+            }
+        }
     }
 }
 

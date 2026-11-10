@@ -11,7 +11,7 @@ struct ImageChatView: View {
     @State private var prompt = ""
     @State private var showPhotos = false
     @State private var showCamera = false
-    @State private var error: String?
+    @State private var errMessage: String?
     @State private var model: String = ""
     @State private var size: String = "1024x1024"
 
@@ -52,9 +52,9 @@ struct ImageChatView: View {
         })
         .sheet(isPresented: $showPhotos) { PhotosPickerSheet { data in addPhoto(data) } }
         .sheet(isPresented: $showCamera) { CameraCapture { data in addPhoto(data) } }
-        .alert("Ошибка", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("OK") { error = nil }
-        } message: { Text(error ?? "") }
+        .alert("Ошибка", isPresented: Binding(get: { errMessage != nil }, set: { if !$0 { errMessage = nil } })) {
+            Button("OK") { errMessage = nil }
+        } message: { Text(errMessage ?? "") }
     }
 
     // MARK: gallery + generation sparkles
@@ -178,42 +178,28 @@ struct ImageChatView: View {
 
 // MARK: - Sparkle effect during image generation (Gemini / ChatGPT style).
 struct SparkleGeneratingView: View {
-    @State private var phase: CGFloat = 0
-    private struct Star: Identifiable {
-        let id = UUID()
-        var x: CGFloat, y: CGFloat, size: CGFloat, delay: Double
-    }
-    private let stars: [Star] = (0..<14).map { i in
-        Star(x: CGFloat((i * 29) % 100) / 100,
-             y: CGFloat((i * 47) % 100) / 100,
-             size: CGFloat(6 + (i % 4) * 3),
-             delay: Double(i % 7) * 0.22)
-    }
+    @State private var phase = false
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(KlainColors.secondary.opacity(0.08))
                 .frame(height: 120)
-            GeometryReader { geo in
-                ForEach(stars) { s in
+            HStack(spacing: 18) {
+                ForEach(0..<5, id: \.self) { i in
                     Image(systemName: "sparkle")
-                        .font(.system(size: s.size))
+                        .font(.system(size: CGFloat(10 + i * 3)))
                         .foregroundStyle(KlainColors.text)
-                        .scaleEffect(0.6 + 0.4 * abs(sin(phase + s.delay)))
-                        .opacity(0.35 + 0.65 * abs(sin(phase + s.delay)))
-                        .position(x: s.x * geo.size.width, y: s.y * geo.size.height)
+                        .scaleEffect(phase ? 1.15 : 0.7)
+                        .opacity(phase ? 1 : 0.35)
+                        .animation(.easeInOut(duration: 0.9).repeatForever().delay(Double(i) * 0.15), value: phase)
                 }
             }
-            .frame(height: 120)
             Text("Генерирую…")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(KlainColors.text)
+                .padding(.top, 60)
         }
-        .onAppear {
-            withAnimation(.linear(duration: 2.2).repeatForever(autoreverses: false)) {
-                phase = .pi * 2
-            }
-        }
+        .onAppear { phase = true }
     }
 }
 

@@ -10,9 +10,8 @@ struct ChatView: View {
 
     @State private var input = ""
     @State private var attachments: [Attachment] = []
-    @State private var showPicker = false
     @State private var importFile = false
-    @State private var error: String?
+    @State private var errMessage: String?
 
     private var chat: Chat? { store.chats.first { $0.id == chatID } }
 
@@ -60,10 +59,9 @@ struct ChatView: View {
         .gesture(DragGesture(minimumDistance: 40).onEnded { v in
             if v.startLocation.x < 60 && v.translation.width > 80 { openMenu() }
         })
-        .alert("Ошибка", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("OK") { error = nil }
-        } message: { Text(error ?? "") }
-        .photosPicker(isPresented: $showPicker, selection: .constant([]), maxSelectionCount: 1, matching: .images)
+        .alert("Ошибка", isPresented: Binding(get: { errMessage != nil }, set: { if !$0 { errMessage = nil } })) {
+            Button("OK") { errMessage = nil }
+        } message: { Text(errMessage ?? "") }
         .fileImporter(isPresented: $importFile, allowedContentTypes: [.image, .pdf, .text, .data], allowsMultipleSelection: true) { result in
             handleFiles(result)
         }
@@ -134,8 +132,8 @@ struct ChatView: View {
     // MARK: composer — identical to ImageChatView
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 10) {
-            // Attachment button opens Photos / Files, NEVER providers.
-            Button { showPicker = true } label: {
+            // Attachment button opens Files, NEVER providers.
+            Button { importFile = true } label: {
                 Image(systemName: "paperclip")
                     .font(.system(size: 17, weight: .light))
                     .foregroundStyle(KlainColors.text)
@@ -143,10 +141,6 @@ struct ChatView: View {
                     .glassCircle()
             }
             .buttonStyle(.plain)
-            .contextMenu {
-                Button("Фото") { showPicker = true }
-                Button("Файлы") { importFile = true }
-            }
 
             TextField("Напиши что-нибудь…", text: $input, axis: .vertical)
                 .lineLimit(1...7)
@@ -193,7 +187,7 @@ struct ChatView: View {
                 let data = try Data(contentsOf: url)
                 attachments.append(Attachment(name: url.lastPathComponent, mime: "application/octet-stream", data: data))
             }
-        } catch { error = error.localizedDescription }
+        } catch let e { errMessage = e.localizedDescription }
     }
 }
 

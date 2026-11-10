@@ -18,7 +18,7 @@ struct ProvidersView: View {
     @Environment(\.dismiss) private var dismiss
     let theme: AppTheme
     @State private var editing: Provider?
-    @State private var error: String?
+    @State private var errMessage: String?
 
     var body: some View {
         ZStack {
@@ -74,10 +74,10 @@ struct ProvidersView: View {
             }
         }
         .hideSystemNavBar()
-        .sheet(item: $editing) { ProviderEditor(provider: $0, theme: theme, error: $error) }
-        .alert("Ошибка", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("OK") { error = nil }
-        } message: { Text(error ?? "") }
+        .sheet(item: $editing) { ProviderEditor(provider: $0, theme: theme, errMessage: $errMessage) }
+        .alert("Ошибка", isPresented: Binding(get: { errMessage != nil }, set: { if !$0 { errMessage = nil } })) {
+            Button("OK") { errMessage = nil }
+        } message: { Text(errMessage ?? "") }
     }
 
     private func section(_ t: String) -> some View {
@@ -109,7 +109,7 @@ struct ProviderEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State var provider: Provider
     let theme: AppTheme
-    @Binding var error: String?
+    @Binding var errMessage: String?
     @State private var models: [ModelEntry] = []
     @State private var headers: [HeaderEntry] = []
     @State private var slug: String = "custom"
@@ -141,7 +141,7 @@ struct ProviderEditor: View {
                             Task {
                                 defer { loading = false }
                                 do { models = try await APIClient().models(provider: provider) }
-                                catch { error = error?.isEmpty == false ? error! : error.debugDescription }
+                                catch let e { errMessage = e.localizedDescription }
                             }
                         } label: {
                             Label(loading ? "Загрузка…" : "Загрузить модели из API", systemImage: "arrow.clockwise")
@@ -208,9 +208,9 @@ struct ProviderEditor: View {
         provider.headers = headers.filter { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }
         guard !provider.name.isEmpty, provider.baseURL.hasPrefix("http"),
               !provider.models!.isEmpty else {
-            error = "Укажи имя, корректный URL и хотя бы одну модель"; return
+            errMessage = "Укажи имя, корректный URL и хотя бы одну модель"; return
         }
         do { try store.configure(provider); dismiss() }
-        catch { error = error.debugDescription }
+        catch let e { errMessage = e.localizedDescription }
     }
 }
