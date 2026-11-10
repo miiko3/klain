@@ -34,6 +34,9 @@ struct Chat: Identifiable, Codable, Equatable {
     var webSearch: Bool?
     var archived: Bool?
     var emoji: String?
+    // "chat" = AI chat, "images" = image-generation chat (pastel gradient marker).
+    var kind: String? = "chat"
+    var isImageChat: Bool { kind == "images" }
 }
 struct Message: Identifiable, Codable, Equatable {
     var id = UUID(); var role: String; var text: String; var attachments: [Attachment] = []

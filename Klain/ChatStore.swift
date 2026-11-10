@@ -142,10 +142,12 @@ import UIKit
     var selectedChat: Chat? { chats.first { $0.id == selectedChatID } }
     var activeChats: [Chat] { chats.filter { $0.archived != true } }
     var archivedChats: [Chat] { chats.filter { $0.archived == true } }
-    func newChat() {
+    func newChat(kind: String = "chat") {
         guard !isSending else { return }
         var c = Chat()
-        c.emoji = ["🌿", "🪐", "🦊", "✨", "🌊", "🍀", "🚀", "🐈", "🌻", "🦋"].randomElement()
+        c.kind = kind
+        c.emoji = kind == "images" ? "🎨" : ["🌿", "🪐", "🦊", "✨", "🌊", "🍀", "🚀", "🐈", "🌻", "🦋"].randomElement()
+        c.title = kind == "images" ? "Картинки" : "Новый чат"
         let provider = activeProvider
         c.providerID = provider?.id
         c.model = provider?.models?.first(where: { $0.id == defaultModel })?.id
@@ -156,6 +158,7 @@ import UIKit
         selectedChatID = c.id
         save()
     }
+    func newImageChat() { newChat(kind: "images") }
     func send(_ text: String, attachments: [Attachment] = []) async {
         defer { isSending = false; generation = nil; save() }
         guard let index = chats.firstIndex(where: { $0.id == selectedChatID }), let provider = activeProvider, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty else { return }
