@@ -58,15 +58,19 @@ struct Snowfall: View {
         let size: CGFloat
         let opacity: Double
     }
-    private let flakes: [Flake] = (0..<30).map { i in
-        Flake(id: i,
-              x: CGFloat((i * 37) % 100) / 100,
-              size: CGFloat(3 + (i % 4)),
-              opacity: 0.3 + Double(i % 3) * 0.15)
-    }
+    private static let flakes: [Flake] = {
+        var result: [Flake] = []
+        for i in 0..<30 {
+            let x = CGFloat((i * 37) % 100) / 100
+            let size = CGFloat(3 + (i % 4))
+            let opacity = 0.3 + Double(i % 3) * 0.15
+            result.append(Flake(id: i, x: x, size: size, opacity: opacity))
+        }
+        return result
+    }()
     var body: some View {
         GeometryReader { geo in
-            ForEach(flakes) { f in
+            ForEach(Self.flakes) { f in
                 Circle()
                     .fill(Color.white)
                     .frame(width: f.size, height: f.size)
